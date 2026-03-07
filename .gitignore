@@ -1,0 +1,91 @@
+# Miscellaneous
+*.class
+*.log
+flutter_*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Node / Playwright (not part of Flutter project)
+node_modules/
+package-lock.json
+test-results/
+tests/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Android
+android/.gradle/
+android/captures/
+
+# iOS / CocoaPods
+ios/Pods/
+ios/.symlinks/
+
+# Firebase Studio workspace state (local-only)
+.idx/
+
+# Firebase — safety net for accidentally committed secrets
+google-services.json
+GoogleService-Info.plist
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Environment variables
+.env
+.env.*
+
+# Secrets & Keys
+*.pem
+*.ppk
+*.key
+*.p12
+*.jks
+*.keystore
+local.properties
+
+# Local Databases (Sqlite, Isar, etc)
+*.db
+*.sqlite
+*.sqlite3
+*.isar
+*.isar.lock
+
+# Secure local release keys
+key.properties
+**/*.jks
+**/*.keystore
