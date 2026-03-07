@@ -1,4 +1,4 @@
-package online.yadukrishnan.orbit
+package online.yadukrishnan.orbitapp
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
