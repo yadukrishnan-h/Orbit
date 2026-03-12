@@ -89,7 +89,7 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
         server.hostname,
         server.port,
         server.username,
-        server.password,
+        server.id,
       );
 
       // Request a PTY-backed interactive shell

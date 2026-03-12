@@ -213,10 +213,14 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
           label,
           style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: AppTheme.infoValueStyle.copyWith(fontSize: 13),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: AppTheme.infoValueStyle.copyWith(fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -243,7 +247,7 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
         widget.server.hostname,
         widget.server.port,
         widget.server.username,
-        widget.server.password,
+        widget.server.id,
         'whoami',
       );
       setState(() {

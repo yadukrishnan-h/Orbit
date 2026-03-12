@@ -62,6 +62,9 @@ class CpuTicks {
 }
 
 class LinuxParser {
+  static const String linuxMetricsCommand =
+      r'cat /proc/stat; echo "|||"; free -b; echo "|||"; df -k /; echo "|||"; cat /proc/uptime; echo "|||"; hostname; echo "|||"; hostname -I || ip addr show; echo "|||"; cat /etc/os-release; echo "|||"; uname -r; exit';
+
   static final RegExp _whiteSpace = RegExp(r'\s+');
 
   /// Parses /proc/stat CPU line: "cpu  2255 34 2290 22625563 6290 127 456"

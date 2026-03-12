@@ -150,7 +150,7 @@ class _IconOptionCard extends StatelessWidget {
               width: 64,
               height: 64,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
+              errorBuilder: (_, _, _) => const Icon(
                 Icons.image_not_supported_outlined,
                 color: AppTheme.textSecondary,
                 size: 40,

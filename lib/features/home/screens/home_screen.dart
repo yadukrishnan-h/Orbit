@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/home/widgets/server_summary_card.dart';
@@ -116,15 +117,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 filled: true,
                 fillColor: AppTheme.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.border),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.border),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.primary),
                 ),
                 contentPadding:

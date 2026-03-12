@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 
 class AppTheme {
   // Beszel Palette (Zinc & Emerald)
@@ -77,10 +78,10 @@ class AppTheme {
       // Card Theme Override
       cardTheme: CardThemeData(
         color: const Color(0xFF18181B),
-        elevation: 0, // FLATTEN EVERYTHING
+        elevation: AppSizes.cardElevation, // FLATTEN EVERYTHING
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8), // Tighter corners
+          borderRadius: BorderRadius.circular(AppSizes.radiusMedium), // Tighter corners
           side: const BorderSide(
               color: Color(0xFF27272A), width: 1), // The Beszel Border
         ),
@@ -107,7 +108,7 @@ class AppTheme {
 
       // Bottom Navigation Bar Theme (Material 3 NavigationBar)
       navigationBarTheme: NavigationBarThemeData(
-        height: 65,
+        height: AppSizes.bottomNavBarHeight,
         backgroundColor: const Color(0xFF09090B), // Zinc 950
         indicatorColor:
             const Color(0xFF10B981).withValues(alpha: 0.1), // Emerald Pill

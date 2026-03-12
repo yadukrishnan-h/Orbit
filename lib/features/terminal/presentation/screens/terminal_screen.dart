@@ -9,6 +9,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/terminal/providers/terminal_provider.dart';
 
@@ -130,7 +131,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         children: [
           const Icon(LucideIcons.terminal,
               size: 18, color: AppTheme.textPrimary),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSizes.p8),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,10 +177,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         if (state.isConnected) ...[
           // Connected indicator dot
           Padding(
-            padding: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.only(right: AppSizes.p4),
             child: Container(
-              width: 8,
-              height: 8,
+              width: AppSizes.p8,
+              height: AppSizes.p8,
               decoration: BoxDecoration(
                 color: AppTheme.success,
                 shape: BoxShape.circle,
@@ -242,7 +243,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         if (servers.isEmpty) {
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(AppSizes.p32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -273,7 +274,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                           size: 52, color: AppTheme.primary),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSizes.p28),
                   Text(
                     ref.tr('no_servers_yet'),
                     style: GoogleFonts.inter(
@@ -282,7 +283,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSizes.p10),
                   Text(
                     ref.tr('add_server_prompt_terminal'),
                     style: GoogleFonts.inter(
@@ -302,7 +303,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
           children: [
             // ── Section Header ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.fromLTRB(AppSizes.p20, AppSizes.p8, AppSizes.p20, 0),
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(milliseconds: 600),
@@ -325,7 +326,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                       child: const Icon(LucideIcons.terminal,
                           size: 36, color: AppTheme.primary),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSizes.p16),
                     Text(
                       ref.tr('open_terminal'),
                       style: GoogleFonts.inter(
@@ -334,7 +335,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSizes.p6),
                     Text(
                       ref.tr('select_server_shell'),
                       style: GoogleFonts.inter(
@@ -342,7 +343,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                         color: AppTheme.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSizes.p24),
                   ],
                 ),
               ),
@@ -350,14 +351,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
 
             // Divider
             const Divider(color: AppTheme.border, height: 1),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSizes.p12),
 
             // ── Server List ──
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(AppSizes.p16, 0, AppSizes.p16, AppSizes.p16),
                 itemCount: servers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: AppSizes.p8),
                 itemBuilder: (context, index) =>
                     _ServerTile(server: servers[index]),
               ),

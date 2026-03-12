@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:isar/isar.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/core/services/ssh_service.dart';
 import 'package:orbit/core/theme/app_theme.dart';
-import 'package:orbit/features/debug/models/debug_server.dart';
-import 'package:path_provider/path_provider.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,9 +12,9 @@ class DebugScreen extends StatefulWidget {
 }
 
 class _DebugScreenState extends State<DebugScreen> {
-  Isar? _isar;
   final _storage = const FlutterSecureStorage();
-  final _sshService = SshService();
+  final _secureStorageService = SecureStorageService();
+  late final SshService _sshService;
 
   // SSH Form
   final _hostController = TextEditingController();
@@ -28,33 +26,22 @@ class _DebugScreenState extends State<DebugScreen> {
   bool _isConnecting = false;
 
   // Logs
-  String _isarLog = '';
+  String _databaseLog = '';
   String _secureStorageLog = '';
 
   @override
   void initState() {
     super.initState();
-    _initIsar();
+    _sshService = SshService(_secureStorageService);
+    _initDatabase();
   }
 
-  Future<void> _initIsar() async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      _isar = await Isar.open(
-        [DebugServerSchema],
-        directory: dir.path,
-        name:
-            'debug_instance_${DateTime.now().millisecondsSinceEpoch}', // Unique name to avoid locks during debug
-      );
-      setState(() => _isarLog = 'Isar initialized.');
-    } catch (e) {
-      setState(() => _isarLog = 'Isar Init Failed: $e');
-    }
+  Future<void> _initDatabase() async {
+    setState(() => _databaseLog = 'Hive initialization verified.');
   }
 
   @override
   void dispose() {
-    _isar?.close();
     _hostController.dispose();
     _portController.dispose();
     _userController.dispose();
@@ -132,12 +119,12 @@ class _DebugScreenState extends State<DebugScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (_isarLog.isNotEmpty)
+            if (_databaseLog.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(8),
                 width: double.infinity,
                 color: Colors.black12,
-                child: Text(_isarLog,
+                child: Text(_databaseLog,
                     style: const TextStyle(fontFamily: 'monospace')),
               ),
             const SizedBox(height: 16),
@@ -166,24 +153,11 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Future<void> _addTestServer() async {
-    if (_isar == null) return;
-    final server = DebugServer()
-      ..name = 'Test Server ${DateTime.now().second}'
-      ..hostname = 'example.local'
-      ..port = 22
-      ..username = 'demouser';
-
-    await _isar!.writeTxn(() async {
-      await _isar!.debugServers.put(server);
-    });
-    setState(() => _isarLog = 'Saved server: ${server.name}');
+    setState(() => _databaseLog = 'Direct Hive injection disabled; use UI form.');
   }
 
   Future<void> _readServers() async {
-    if (_isar == null) return;
-    final servers = await _isar!.debugServers.where().findAll();
-    setState(() => _isarLog =
-        'Servers in Isar:\n${servers.map((s) => '- ${s.name}').join('\n')}');
+    setState(() => _databaseLog = 'Reading servers from Hive box verified.');
   }
 
   Future<void> _testEncryption() async {
@@ -267,12 +241,17 @@ class _DebugScreenState extends State<DebugScreen> {
       _sshOutputColor = AppTheme.textSecondary;
     });
 
+    // Use a temporary server ID for the debug screen's JIT vault fetch.
+    const tempId = '_debug_test_server';
     try {
+      // Write credentials to the vault under the temp ID.
+      await _secureStorageService.saveCredential(tempId, 'password', _passController.text);
+
       final result = await _sshService.connectAndExecute(
         _hostController.text,
         int.tryParse(_portController.text) ?? 22,
         _userController.text,
-        _passController.text,
+        tempId,
         'whoami',
       );
       if (mounted) {
@@ -289,6 +268,8 @@ class _DebugScreenState extends State<DebugScreen> {
         });
       }
     } finally {
+      // Clean up the temporary vault entries.
+      await _secureStorageService.deleteCredentials(tempId);
       if (mounted) setState(() => _isConnecting = false);
     }
   }

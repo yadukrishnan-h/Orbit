@@ -3,7 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'server_stats.freezed.dart';
 
 @freezed
-class ServerStats with _$ServerStats {
+abstract class ServerStats with _$ServerStats {
   const factory ServerStats({
     @Default(0.0) double cpuPct,
     @Default(0.0) double ramPct,

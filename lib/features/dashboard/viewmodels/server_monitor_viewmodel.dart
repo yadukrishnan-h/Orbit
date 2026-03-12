@@ -11,8 +11,9 @@ import 'package:orbit/core/utils/linux_parser.dart';
 import 'package:orbit/features/dashboard/models/server_stats.dart';
 import 'package:orbit/features/dashboard/models/ssh_connection_state.dart';
 import 'package:orbit/features/dashboard/repositories/server_repository.dart';
-import 'package:orbit/core/services/isar_service.dart';
+import 'package:orbit/core/services/hive_service.dart';
 import 'package:orbit/core/providers.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/core/providers/server_loading_provider.dart';
 import 'package:orbit/core/services/geolocation_service.dart';
 import 'package:orbit/features/settings/providers/settings_provider.dart';
@@ -77,8 +78,9 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
 
   @override
   Future<void> build() async {
-    final isar = await ref.watch(isarProvider.future);
-    _repository = ServerRepository(isar);
+    final hiveBox = await ref.watch(hiveProvider.future);
+    final secureStorage = ref.read(secureStorageServiceProvider);
+    _repository = ServerRepository(hiveBox, secureStorage);
     _sshService = ref.watch(sshServiceProvider);
     _loadingNotifier = ref.read(serverLoadingProvider.notifier);
 
@@ -97,11 +99,27 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     // Network monitoring
     await _initConnectivityMonitoring();
 
-    // Auto-start for all existing servers
-    final servers = await _repository.watchAllServers().first;
-    for (final server in servers) {
-      await startMonitoring(server.id);
-    }
+    // React to server list changes: handles startup + dynamic add/remove
+    ref.listen<AsyncValue<List<Server>>>(
+      serverListStreamProvider,
+      (previous, next) {
+        next.whenData((newList) async {
+          final newIds = newList.map((s) => s.id).toSet();
+          final currentIds = Set<String>.from(_connectionStates.keys);
+
+          // Start monitoring newly added servers
+          for (final id in newIds.difference(currentIds)) {
+            await startMonitoring(id);
+          }
+
+          // Stop monitoring deleted servers
+          for (final id in currentIds.difference(newIds)) {
+            await stopMonitoring(id);
+          }
+        });
+      },
+      fireImmediately: true,
+    );
 
     ref.onDispose(() {
       // [Fix 1] Deregister observer
@@ -144,6 +162,11 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
   SshConnectionState getConnectionState(String serverId) =>
       _connectionStates[serverId] ?? SshConnectionState.connecting;
 
+  void clearServerHistory(String serverId) {
+    _serverHistories[serverId] = [];
+    state = const AsyncValue.data(null);
+  }
+
   Future<void> startMonitoring(String serverId) async {
     if (_pollingTimers.containsKey(serverId)) return;
 
@@ -164,6 +187,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     _cpuStates.remove(serverId);
     _serverHistories.remove(serverId);
     _connectionStates.remove(serverId);
+    await _repository.setStatus(serverId, ServerStatus.offline);
   }
 
   Future<void> stopAllMonitoring() async {
@@ -302,10 +326,18 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       // [Fix 2] Enforce 10-second timeout on SSH connect
       final client = await _sshService
           .connect(
-              server.hostname, server.port, server.username, server.password)
+              server.hostname, server.port, server.username, server.id)
           .timeout(_kSshTimeout);
 
       if (client == null) throw Exception('SSH connection returned null');
+
+      // Abandonment check: if the connection was cancelled while in-flight,
+      // close the client and return to avoid a zombie polling timer.
+      if (_isConnecting[serverId] != true) {
+        debugPrint('ServerMonitor: Connection abandoned for $serverId - closing');
+        client.close();
+        return;
+      }
 
       _sshClients[serverId] = client;
       _cpuStates[serverId] = _CpuState(prevIdle: 0, prevTotal: 0);
@@ -361,13 +393,11 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     if (client == null || cpuState == null) return;
 
     try {
-      const pollingCmd =
-          r'cat /proc/stat; echo "|||"; free -b; echo "|||"; df -k /; echo "|||"; cat /proc/uptime; echo "|||"; hostname; echo "|||"; hostname -I || ip addr show; echo "|||"; cat /etc/os-release; echo "|||"; uname -r; exit';
-
       final stopwatch = Stopwatch()..start();
 
       // [Fix 2] Hard 10s timeout on SSH run
-      final result = await client.run(pollingCmd).timeout(_kSshTimeout);
+      final result =
+          await client.run(LinuxParser.linuxMetricsCommand).timeout(_kSshTimeout);
       stopwatch.stop();
 
       final rawOutput = utf8.decode(result).trim();
@@ -483,7 +513,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         // [Fix 2] 10-second hard timeout on reconnect connect
         final client = await _sshService
             .connect(
-                server.hostname, server.port, server.username, server.password)
+                server.hostname, server.port, server.username, server.id)
             .timeout(_kSshTimeout);
 
         if (client == null) throw Exception('Connection returned null');
@@ -629,7 +659,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         diskUsed: statsMap['diskUsed'] ?? 0,
         diskTotal: statsMap['diskTotal'] ?? 0,
       );
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('Isolate Parsing Error: $e\n$stackTrace');
       return ServerStats(
         cpuPct: 0.0,
         ramPct: 0.0,

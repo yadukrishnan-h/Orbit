@@ -1,5 +1,5 @@
-// coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
@@ -9,601 +9,346 @@ part of 'server.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// dart format off
 T _$identity<T>(T value) => value;
-
-final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
-
-Server _$ServerFromJson(Map<String, dynamic> json) {
-  return _Server.fromJson(json);
-}
 
 /// @nodoc
 mixin _$Server {
-  String get id => throw _privateConstructorUsedError;
-  String get name => throw _privateConstructorUsedError;
-  String get hostname => throw _privateConstructorUsedError;
-  int get port => throw _privateConstructorUsedError;
-  String get username => throw _privateConstructorUsedError;
-  String get password =>
-      throw _privateConstructorUsedError; // Added password field
-  AuthType get authType => throw _privateConstructorUsedError;
-  ServerStatus get status =>
-      throw _privateConstructorUsedError; // Snapshot Data
-  double? get lastCpu => throw _privateConstructorUsedError;
-  double? get lastRam => throw _privateConstructorUsedError;
-  double? get lastDisk => throw _privateConstructorUsedError;
-  DateTime? get lastSeen =>
-      throw _privateConstructorUsedError; // Persisted System Info
-  String get osDistro => throw _privateConstructorUsedError;
-  String get kernelVersion => throw _privateConstructorUsedError;
-  String get uptime => throw _privateConstructorUsedError;
-  String get hostnameInfo => throw _privateConstructorUsedError;
-  String get ipAddress =>
-      throw _privateConstructorUsedError; // Added IP Persistence
-  String get serverLocation =>
-      throw _privateConstructorUsedError; // Geolocation data
-  int get lastLatency => throw _privateConstructorUsedError;
-  int get lastDiskUsed => throw _privateConstructorUsedError; // Disk Used Bytes
-  int get lastDiskTotal => throw _privateConstructorUsedError;
 
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-  @JsonKey(ignore: true)
-  $ServerCopyWith<Server> get copyWith => throw _privateConstructorUsedError;
+ String get id; String get name; String get hostname; int get port; String get username; String get password;// Added password field
+ String? get privateKey;// Added private key field
+ AuthType get authType; ServerStatus get status;// Snapshot Data
+ double? get lastCpu; double? get lastRam; double? get lastDisk; DateTime? get lastSeen;// Persisted System Info
+ String get osDistro; String get kernelVersion; String get uptime; String get hostnameInfo; String get ipAddress;// Added IP Persistence
+ String get serverLocation;// Geolocation data
+ int get lastLatency; int get lastDiskUsed;// Disk Used Bytes
+ int get lastDiskTotal;
+/// Create a copy of Server
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ServerCopyWith<Server> get copyWith => _$ServerCopyWithImpl<Server>(this as Server, _$identity);
+
+  /// Serializes this Server to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Server&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.hostname, hostname) || other.hostname == hostname)&&(identical(other.port, port) || other.port == port)&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.privateKey, privateKey) || other.privateKey == privateKey)&&(identical(other.authType, authType) || other.authType == authType)&&(identical(other.status, status) || other.status == status)&&(identical(other.lastCpu, lastCpu) || other.lastCpu == lastCpu)&&(identical(other.lastRam, lastRam) || other.lastRam == lastRam)&&(identical(other.lastDisk, lastDisk) || other.lastDisk == lastDisk)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.osDistro, osDistro) || other.osDistro == osDistro)&&(identical(other.kernelVersion, kernelVersion) || other.kernelVersion == kernelVersion)&&(identical(other.uptime, uptime) || other.uptime == uptime)&&(identical(other.hostnameInfo, hostnameInfo) || other.hostnameInfo == hostnameInfo)&&(identical(other.ipAddress, ipAddress) || other.ipAddress == ipAddress)&&(identical(other.serverLocation, serverLocation) || other.serverLocation == serverLocation)&&(identical(other.lastLatency, lastLatency) || other.lastLatency == lastLatency)&&(identical(other.lastDiskUsed, lastDiskUsed) || other.lastDiskUsed == lastDiskUsed)&&(identical(other.lastDiskTotal, lastDiskTotal) || other.lastDiskTotal == lastDiskTotal));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hashAll([runtimeType,id,name,hostname,port,username,password,privateKey,authType,status,lastCpu,lastRam,lastDisk,lastSeen,osDistro,kernelVersion,uptime,hostnameInfo,ipAddress,serverLocation,lastLatency,lastDiskUsed,lastDiskTotal]);
+
+@override
+String toString() {
+  return 'Server(id: $id, name: $name, hostname: $hostname, port: $port, username: $username, password: $password, privateKey: $privateKey, authType: $authType, status: $status, lastCpu: $lastCpu, lastRam: $lastRam, lastDisk: $lastDisk, lastSeen: $lastSeen, osDistro: $osDistro, kernelVersion: $kernelVersion, uptime: $uptime, hostnameInfo: $hostnameInfo, ipAddress: $ipAddress, serverLocation: $serverLocation, lastLatency: $lastLatency, lastDiskUsed: $lastDiskUsed, lastDiskTotal: $lastDiskTotal)';
+}
+
+
 }
 
 /// @nodoc
-abstract class $ServerCopyWith<$Res> {
-  factory $ServerCopyWith(Server value, $Res Function(Server) then) =
-      _$ServerCopyWithImpl<$Res, Server>;
-  @useResult
-  $Res call(
-      {String id,
-      String name,
-      String hostname,
-      int port,
-      String username,
-      String password,
-      AuthType authType,
-      ServerStatus status,
-      double? lastCpu,
-      double? lastRam,
-      double? lastDisk,
-      DateTime? lastSeen,
-      String osDistro,
-      String kernelVersion,
-      String uptime,
-      String hostnameInfo,
-      String ipAddress,
-      String serverLocation,
-      int lastLatency,
-      int lastDiskUsed,
-      int lastDiskTotal});
-}
+abstract mixin class $ServerCopyWith<$Res>  {
+  factory $ServerCopyWith(Server value, $Res Function(Server) _then) = _$ServerCopyWithImpl;
+@useResult
+$Res call({
+ String id, String name, String hostname, int port, String username, String password, String? privateKey, AuthType authType, ServerStatus status, double? lastCpu, double? lastRam, double? lastDisk, DateTime? lastSeen, String osDistro, String kernelVersion, String uptime, String hostnameInfo, String ipAddress, String serverLocation, int lastLatency, int lastDiskUsed, int lastDiskTotal
+});
 
+
+
+
+}
 /// @nodoc
-class _$ServerCopyWithImpl<$Res, $Val extends Server>
+class _$ServerCopyWithImpl<$Res>
     implements $ServerCopyWith<$Res> {
-  _$ServerCopyWithImpl(this._value, this._then);
+  _$ServerCopyWithImpl(this._self, this._then);
 
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
+  final Server _self;
+  final $Res Function(Server) _then;
 
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? name = null,
-    Object? hostname = null,
-    Object? port = null,
-    Object? username = null,
-    Object? password = null,
-    Object? authType = null,
-    Object? status = null,
-    Object? lastCpu = freezed,
-    Object? lastRam = freezed,
-    Object? lastDisk = freezed,
-    Object? lastSeen = freezed,
-    Object? osDistro = null,
-    Object? kernelVersion = null,
-    Object? uptime = null,
-    Object? hostnameInfo = null,
-    Object? ipAddress = null,
-    Object? serverLocation = null,
-    Object? lastLatency = null,
-    Object? lastDiskUsed = null,
-    Object? lastDiskTotal = null,
-  }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      hostname: null == hostname
-          ? _value.hostname
-          : hostname // ignore: cast_nullable_to_non_nullable
-              as String,
-      port: null == port
-          ? _value.port
-          : port // ignore: cast_nullable_to_non_nullable
-              as int,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      password: null == password
-          ? _value.password
-          : password // ignore: cast_nullable_to_non_nullable
-              as String,
-      authType: null == authType
-          ? _value.authType
-          : authType // ignore: cast_nullable_to_non_nullable
-              as AuthType,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as ServerStatus,
-      lastCpu: freezed == lastCpu
-          ? _value.lastCpu
-          : lastCpu // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastRam: freezed == lastRam
-          ? _value.lastRam
-          : lastRam // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastDisk: freezed == lastDisk
-          ? _value.lastDisk
-          : lastDisk // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastSeen: freezed == lastSeen
-          ? _value.lastSeen
-          : lastSeen // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-      osDistro: null == osDistro
-          ? _value.osDistro
-          : osDistro // ignore: cast_nullable_to_non_nullable
-              as String,
-      kernelVersion: null == kernelVersion
-          ? _value.kernelVersion
-          : kernelVersion // ignore: cast_nullable_to_non_nullable
-              as String,
-      uptime: null == uptime
-          ? _value.uptime
-          : uptime // ignore: cast_nullable_to_non_nullable
-              as String,
-      hostnameInfo: null == hostnameInfo
-          ? _value.hostnameInfo
-          : hostnameInfo // ignore: cast_nullable_to_non_nullable
-              as String,
-      ipAddress: null == ipAddress
-          ? _value.ipAddress
-          : ipAddress // ignore: cast_nullable_to_non_nullable
-              as String,
-      serverLocation: null == serverLocation
-          ? _value.serverLocation
-          : serverLocation // ignore: cast_nullable_to_non_nullable
-              as String,
-      lastLatency: null == lastLatency
-          ? _value.lastLatency
-          : lastLatency // ignore: cast_nullable_to_non_nullable
-              as int,
-      lastDiskUsed: null == lastDiskUsed
-          ? _value.lastDiskUsed
-          : lastDiskUsed // ignore: cast_nullable_to_non_nullable
-              as int,
-      lastDiskTotal: null == lastDiskTotal
-          ? _value.lastDiskTotal
-          : lastDiskTotal // ignore: cast_nullable_to_non_nullable
-              as int,
-    ) as $Val);
-  }
+/// Create a copy of Server
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? hostname = null,Object? port = null,Object? username = null,Object? password = null,Object? privateKey = freezed,Object? authType = null,Object? status = null,Object? lastCpu = freezed,Object? lastRam = freezed,Object? lastDisk = freezed,Object? lastSeen = freezed,Object? osDistro = null,Object? kernelVersion = null,Object? uptime = null,Object? hostnameInfo = null,Object? ipAddress = null,Object? serverLocation = null,Object? lastLatency = null,Object? lastDiskUsed = null,Object? lastDiskTotal = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,hostname: null == hostname ? _self.hostname : hostname // ignore: cast_nullable_to_non_nullable
+as String,port: null == port ? _self.port : port // ignore: cast_nullable_to_non_nullable
+as int,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
+as String,privateKey: freezed == privateKey ? _self.privateKey : privateKey // ignore: cast_nullable_to_non_nullable
+as String?,authType: null == authType ? _self.authType : authType // ignore: cast_nullable_to_non_nullable
+as AuthType,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as ServerStatus,lastCpu: freezed == lastCpu ? _self.lastCpu : lastCpu // ignore: cast_nullable_to_non_nullable
+as double?,lastRam: freezed == lastRam ? _self.lastRam : lastRam // ignore: cast_nullable_to_non_nullable
+as double?,lastDisk: freezed == lastDisk ? _self.lastDisk : lastDisk // ignore: cast_nullable_to_non_nullable
+as double?,lastSeen: freezed == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
+as DateTime?,osDistro: null == osDistro ? _self.osDistro : osDistro // ignore: cast_nullable_to_non_nullable
+as String,kernelVersion: null == kernelVersion ? _self.kernelVersion : kernelVersion // ignore: cast_nullable_to_non_nullable
+as String,uptime: null == uptime ? _self.uptime : uptime // ignore: cast_nullable_to_non_nullable
+as String,hostnameInfo: null == hostnameInfo ? _self.hostnameInfo : hostnameInfo // ignore: cast_nullable_to_non_nullable
+as String,ipAddress: null == ipAddress ? _self.ipAddress : ipAddress // ignore: cast_nullable_to_non_nullable
+as String,serverLocation: null == serverLocation ? _self.serverLocation : serverLocation // ignore: cast_nullable_to_non_nullable
+as String,lastLatency: null == lastLatency ? _self.lastLatency : lastLatency // ignore: cast_nullable_to_non_nullable
+as int,lastDiskUsed: null == lastDiskUsed ? _self.lastDiskUsed : lastDiskUsed // ignore: cast_nullable_to_non_nullable
+as int,lastDiskTotal: null == lastDiskTotal ? _self.lastDiskTotal : lastDiskTotal // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
 }
 
-/// @nodoc
-abstract class _$$ServerImplCopyWith<$Res> implements $ServerCopyWith<$Res> {
-  factory _$$ServerImplCopyWith(
-          _$ServerImpl value, $Res Function(_$ServerImpl) then) =
-      __$$ServerImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call(
-      {String id,
-      String name,
-      String hostname,
-      int port,
-      String username,
-      String password,
-      AuthType authType,
-      ServerStatus status,
-      double? lastCpu,
-      double? lastRam,
-      double? lastDisk,
-      DateTime? lastSeen,
-      String osDistro,
-      String kernelVersion,
-      String uptime,
-      String hostnameInfo,
-      String ipAddress,
-      String serverLocation,
-      int lastLatency,
-      int lastDiskUsed,
-      int lastDiskTotal});
 }
 
-/// @nodoc
-class __$$ServerImplCopyWithImpl<$Res>
-    extends _$ServerCopyWithImpl<$Res, _$ServerImpl>
-    implements _$$ServerImplCopyWith<$Res> {
-  __$$ServerImplCopyWithImpl(
-      _$ServerImpl _value, $Res Function(_$ServerImpl) _then)
-      : super(_value, _then);
 
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? name = null,
-    Object? hostname = null,
-    Object? port = null,
-    Object? username = null,
-    Object? password = null,
-    Object? authType = null,
-    Object? status = null,
-    Object? lastCpu = freezed,
-    Object? lastRam = freezed,
-    Object? lastDisk = freezed,
-    Object? lastSeen = freezed,
-    Object? osDistro = null,
-    Object? kernelVersion = null,
-    Object? uptime = null,
-    Object? hostnameInfo = null,
-    Object? ipAddress = null,
-    Object? serverLocation = null,
-    Object? lastLatency = null,
-    Object? lastDiskUsed = null,
-    Object? lastDiskTotal = null,
-  }) {
-    return _then(_$ServerImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      hostname: null == hostname
-          ? _value.hostname
-          : hostname // ignore: cast_nullable_to_non_nullable
-              as String,
-      port: null == port
-          ? _value.port
-          : port // ignore: cast_nullable_to_non_nullable
-              as int,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      password: null == password
-          ? _value.password
-          : password // ignore: cast_nullable_to_non_nullable
-              as String,
-      authType: null == authType
-          ? _value.authType
-          : authType // ignore: cast_nullable_to_non_nullable
-              as AuthType,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as ServerStatus,
-      lastCpu: freezed == lastCpu
-          ? _value.lastCpu
-          : lastCpu // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastRam: freezed == lastRam
-          ? _value.lastRam
-          : lastRam // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastDisk: freezed == lastDisk
-          ? _value.lastDisk
-          : lastDisk // ignore: cast_nullable_to_non_nullable
-              as double?,
-      lastSeen: freezed == lastSeen
-          ? _value.lastSeen
-          : lastSeen // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-      osDistro: null == osDistro
-          ? _value.osDistro
-          : osDistro // ignore: cast_nullable_to_non_nullable
-              as String,
-      kernelVersion: null == kernelVersion
-          ? _value.kernelVersion
-          : kernelVersion // ignore: cast_nullable_to_non_nullable
-              as String,
-      uptime: null == uptime
-          ? _value.uptime
-          : uptime // ignore: cast_nullable_to_non_nullable
-              as String,
-      hostnameInfo: null == hostnameInfo
-          ? _value.hostnameInfo
-          : hostnameInfo // ignore: cast_nullable_to_non_nullable
-              as String,
-      ipAddress: null == ipAddress
-          ? _value.ipAddress
-          : ipAddress // ignore: cast_nullable_to_non_nullable
-              as String,
-      serverLocation: null == serverLocation
-          ? _value.serverLocation
-          : serverLocation // ignore: cast_nullable_to_non_nullable
-              as String,
-      lastLatency: null == lastLatency
-          ? _value.lastLatency
-          : lastLatency // ignore: cast_nullable_to_non_nullable
-              as int,
-      lastDiskUsed: null == lastDiskUsed
-          ? _value.lastDiskUsed
-          : lastDiskUsed // ignore: cast_nullable_to_non_nullable
-              as int,
-      lastDiskTotal: null == lastDiskTotal
-          ? _value.lastDiskTotal
-          : lastDiskTotal // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
-  }
+/// Adds pattern-matching-related methods to [Server].
+extension ServerPatterns on Server {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Server value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _Server() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Server value)  $default,){
+final _that = this;
+switch (_that) {
+case _Server():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Server value)?  $default,){
+final _that = this;
+switch (_that) {
+case _Server() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String hostname,  int port,  String username,  String password,  String? privateKey,  AuthType authType,  ServerStatus status,  double? lastCpu,  double? lastRam,  double? lastDisk,  DateTime? lastSeen,  String osDistro,  String kernelVersion,  String uptime,  String hostnameInfo,  String ipAddress,  String serverLocation,  int lastLatency,  int lastDiskUsed,  int lastDiskTotal)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _Server() when $default != null:
+return $default(_that.id,_that.name,_that.hostname,_that.port,_that.username,_that.password,_that.privateKey,_that.authType,_that.status,_that.lastCpu,_that.lastRam,_that.lastDisk,_that.lastSeen,_that.osDistro,_that.kernelVersion,_that.uptime,_that.hostnameInfo,_that.ipAddress,_that.serverLocation,_that.lastLatency,_that.lastDiskUsed,_that.lastDiskTotal);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String hostname,  int port,  String username,  String password,  String? privateKey,  AuthType authType,  ServerStatus status,  double? lastCpu,  double? lastRam,  double? lastDisk,  DateTime? lastSeen,  String osDistro,  String kernelVersion,  String uptime,  String hostnameInfo,  String ipAddress,  String serverLocation,  int lastLatency,  int lastDiskUsed,  int lastDiskTotal)  $default,) {final _that = this;
+switch (_that) {
+case _Server():
+return $default(_that.id,_that.name,_that.hostname,_that.port,_that.username,_that.password,_that.privateKey,_that.authType,_that.status,_that.lastCpu,_that.lastRam,_that.lastDisk,_that.lastSeen,_that.osDistro,_that.kernelVersion,_that.uptime,_that.hostnameInfo,_that.ipAddress,_that.serverLocation,_that.lastLatency,_that.lastDiskUsed,_that.lastDiskTotal);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String hostname,  int port,  String username,  String password,  String? privateKey,  AuthType authType,  ServerStatus status,  double? lastCpu,  double? lastRam,  double? lastDisk,  DateTime? lastSeen,  String osDistro,  String kernelVersion,  String uptime,  String hostnameInfo,  String ipAddress,  String serverLocation,  int lastLatency,  int lastDiskUsed,  int lastDiskTotal)?  $default,) {final _that = this;
+switch (_that) {
+case _Server() when $default != null:
+return $default(_that.id,_that.name,_that.hostname,_that.port,_that.username,_that.password,_that.privateKey,_that.authType,_that.status,_that.lastCpu,_that.lastRam,_that.lastDisk,_that.lastSeen,_that.osDistro,_that.kernelVersion,_that.uptime,_that.hostnameInfo,_that.ipAddress,_that.serverLocation,_that.lastLatency,_that.lastDiskUsed,_that.lastDiskTotal);case _:
+  return null;
+
+}
+}
+
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$ServerImpl implements _Server {
-  const _$ServerImpl(
-      {required this.id,
-      required this.name,
-      required this.hostname,
-      required this.port,
-      required this.username,
-      required this.password,
-      required this.authType,
-      this.status = ServerStatus.unknown,
-      this.lastCpu,
-      this.lastRam,
-      this.lastDisk,
-      this.lastSeen,
-      this.osDistro = '',
-      this.kernelVersion = '',
-      this.uptime = '',
-      this.hostnameInfo = '',
-      this.ipAddress = '',
-      this.serverLocation = '',
-      this.lastLatency = 0,
-      this.lastDiskUsed = 0,
-      this.lastDiskTotal = 0});
 
-  factory _$ServerImpl.fromJson(Map<String, dynamic> json) =>
-      _$$ServerImplFromJson(json);
+class _Server implements Server {
+  const _Server({required this.id, required this.name, required this.hostname, required this.port, required this.username, required this.password, this.privateKey, required this.authType, this.status = ServerStatus.unknown, this.lastCpu, this.lastRam, this.lastDisk, this.lastSeen, this.osDistro = '', this.kernelVersion = '', this.uptime = '', this.hostnameInfo = '', this.ipAddress = '', this.serverLocation = '', this.lastLatency = 0, this.lastDiskUsed = 0, this.lastDiskTotal = 0});
+  factory _Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
 
-  @override
-  final String id;
-  @override
-  final String name;
-  @override
-  final String hostname;
-  @override
-  final int port;
-  @override
-  final String username;
-  @override
-  final String password;
+@override final  String id;
+@override final  String name;
+@override final  String hostname;
+@override final  int port;
+@override final  String username;
+@override final  String password;
 // Added password field
-  @override
-  final AuthType authType;
-  @override
-  @JsonKey()
-  final ServerStatus status;
+@override final  String? privateKey;
+// Added private key field
+@override final  AuthType authType;
+@override@JsonKey() final  ServerStatus status;
 // Snapshot Data
-  @override
-  final double? lastCpu;
-  @override
-  final double? lastRam;
-  @override
-  final double? lastDisk;
-  @override
-  final DateTime? lastSeen;
+@override final  double? lastCpu;
+@override final  double? lastRam;
+@override final  double? lastDisk;
+@override final  DateTime? lastSeen;
 // Persisted System Info
-  @override
-  @JsonKey()
-  final String osDistro;
-  @override
-  @JsonKey()
-  final String kernelVersion;
-  @override
-  @JsonKey()
-  final String uptime;
-  @override
-  @JsonKey()
-  final String hostnameInfo;
-  @override
-  @JsonKey()
-  final String ipAddress;
+@override@JsonKey() final  String osDistro;
+@override@JsonKey() final  String kernelVersion;
+@override@JsonKey() final  String uptime;
+@override@JsonKey() final  String hostnameInfo;
+@override@JsonKey() final  String ipAddress;
 // Added IP Persistence
-  @override
-  @JsonKey()
-  final String serverLocation;
+@override@JsonKey() final  String serverLocation;
 // Geolocation data
-  @override
-  @JsonKey()
-  final int lastLatency;
-  @override
-  @JsonKey()
-  final int lastDiskUsed;
+@override@JsonKey() final  int lastLatency;
+@override@JsonKey() final  int lastDiskUsed;
 // Disk Used Bytes
-  @override
-  @JsonKey()
-  final int lastDiskTotal;
+@override@JsonKey() final  int lastDiskTotal;
 
-  @override
-  String toString() {
-    return 'Server(id: $id, name: $name, hostname: $hostname, port: $port, username: $username, password: $password, authType: $authType, status: $status, lastCpu: $lastCpu, lastRam: $lastRam, lastDisk: $lastDisk, lastSeen: $lastSeen, osDistro: $osDistro, kernelVersion: $kernelVersion, uptime: $uptime, hostnameInfo: $hostnameInfo, ipAddress: $ipAddress, serverLocation: $serverLocation, lastLatency: $lastLatency, lastDiskUsed: $lastDiskUsed, lastDiskTotal: $lastDiskTotal)';
-  }
+/// Create a copy of Server
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ServerCopyWith<_Server> get copyWith => __$ServerCopyWithImpl<_Server>(this, _$identity);
 
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$ServerImpl &&
-            (identical(other.id, id) || other.id == id) &&
-            (identical(other.name, name) || other.name == name) &&
-            (identical(other.hostname, hostname) ||
-                other.hostname == hostname) &&
-            (identical(other.port, port) || other.port == port) &&
-            (identical(other.username, username) ||
-                other.username == username) &&
-            (identical(other.password, password) ||
-                other.password == password) &&
-            (identical(other.authType, authType) ||
-                other.authType == authType) &&
-            (identical(other.status, status) || other.status == status) &&
-            (identical(other.lastCpu, lastCpu) || other.lastCpu == lastCpu) &&
-            (identical(other.lastRam, lastRam) || other.lastRam == lastRam) &&
-            (identical(other.lastDisk, lastDisk) ||
-                other.lastDisk == lastDisk) &&
-            (identical(other.lastSeen, lastSeen) ||
-                other.lastSeen == lastSeen) &&
-            (identical(other.osDistro, osDistro) ||
-                other.osDistro == osDistro) &&
-            (identical(other.kernelVersion, kernelVersion) ||
-                other.kernelVersion == kernelVersion) &&
-            (identical(other.uptime, uptime) || other.uptime == uptime) &&
-            (identical(other.hostnameInfo, hostnameInfo) ||
-                other.hostnameInfo == hostnameInfo) &&
-            (identical(other.ipAddress, ipAddress) ||
-                other.ipAddress == ipAddress) &&
-            (identical(other.serverLocation, serverLocation) ||
-                other.serverLocation == serverLocation) &&
-            (identical(other.lastLatency, lastLatency) ||
-                other.lastLatency == lastLatency) &&
-            (identical(other.lastDiskUsed, lastDiskUsed) ||
-                other.lastDiskUsed == lastDiskUsed) &&
-            (identical(other.lastDiskTotal, lastDiskTotal) ||
-                other.lastDiskTotal == lastDiskTotal));
-  }
-
-  @JsonKey(ignore: true)
-  @override
-  int get hashCode => Object.hashAll([
-        runtimeType,
-        id,
-        name,
-        hostname,
-        port,
-        username,
-        password,
-        authType,
-        status,
-        lastCpu,
-        lastRam,
-        lastDisk,
-        lastSeen,
-        osDistro,
-        kernelVersion,
-        uptime,
-        hostnameInfo,
-        ipAddress,
-        serverLocation,
-        lastLatency,
-        lastDiskUsed,
-        lastDiskTotal
-      ]);
-
-  @JsonKey(ignore: true)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$ServerImplCopyWith<_$ServerImpl> get copyWith =>
-      __$$ServerImplCopyWithImpl<_$ServerImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$ServerImplToJson(
-      this,
-    );
-  }
+@override
+Map<String, dynamic> toJson() {
+  return _$ServerToJson(this, );
 }
 
-abstract class _Server implements Server {
-  const factory _Server(
-      {required final String id,
-      required final String name,
-      required final String hostname,
-      required final int port,
-      required final String username,
-      required final String password,
-      required final AuthType authType,
-      final ServerStatus status,
-      final double? lastCpu,
-      final double? lastRam,
-      final double? lastDisk,
-      final DateTime? lastSeen,
-      final String osDistro,
-      final String kernelVersion,
-      final String uptime,
-      final String hostnameInfo,
-      final String ipAddress,
-      final String serverLocation,
-      final int lastLatency,
-      final int lastDiskUsed,
-      final int lastDiskTotal}) = _$ServerImpl;
-
-  factory _Server.fromJson(Map<String, dynamic> json) = _$ServerImpl.fromJson;
-
-  @override
-  String get id;
-  @override
-  String get name;
-  @override
-  String get hostname;
-  @override
-  int get port;
-  @override
-  String get username;
-  @override
-  String get password;
-  @override // Added password field
-  AuthType get authType;
-  @override
-  ServerStatus get status;
-  @override // Snapshot Data
-  double? get lastCpu;
-  @override
-  double? get lastRam;
-  @override
-  double? get lastDisk;
-  @override
-  DateTime? get lastSeen;
-  @override // Persisted System Info
-  String get osDistro;
-  @override
-  String get kernelVersion;
-  @override
-  String get uptime;
-  @override
-  String get hostnameInfo;
-  @override
-  String get ipAddress;
-  @override // Added IP Persistence
-  String get serverLocation;
-  @override // Geolocation data
-  int get lastLatency;
-  @override
-  int get lastDiskUsed;
-  @override // Disk Used Bytes
-  int get lastDiskTotal;
-  @override
-  @JsonKey(ignore: true)
-  _$$ServerImplCopyWith<_$ServerImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Server&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.hostname, hostname) || other.hostname == hostname)&&(identical(other.port, port) || other.port == port)&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.privateKey, privateKey) || other.privateKey == privateKey)&&(identical(other.authType, authType) || other.authType == authType)&&(identical(other.status, status) || other.status == status)&&(identical(other.lastCpu, lastCpu) || other.lastCpu == lastCpu)&&(identical(other.lastRam, lastRam) || other.lastRam == lastRam)&&(identical(other.lastDisk, lastDisk) || other.lastDisk == lastDisk)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.osDistro, osDistro) || other.osDistro == osDistro)&&(identical(other.kernelVersion, kernelVersion) || other.kernelVersion == kernelVersion)&&(identical(other.uptime, uptime) || other.uptime == uptime)&&(identical(other.hostnameInfo, hostnameInfo) || other.hostnameInfo == hostnameInfo)&&(identical(other.ipAddress, ipAddress) || other.ipAddress == ipAddress)&&(identical(other.serverLocation, serverLocation) || other.serverLocation == serverLocation)&&(identical(other.lastLatency, lastLatency) || other.lastLatency == lastLatency)&&(identical(other.lastDiskUsed, lastDiskUsed) || other.lastDiskUsed == lastDiskUsed)&&(identical(other.lastDiskTotal, lastDiskTotal) || other.lastDiskTotal == lastDiskTotal));
 }
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hashAll([runtimeType,id,name,hostname,port,username,password,privateKey,authType,status,lastCpu,lastRam,lastDisk,lastSeen,osDistro,kernelVersion,uptime,hostnameInfo,ipAddress,serverLocation,lastLatency,lastDiskUsed,lastDiskTotal]);
+
+@override
+String toString() {
+  return 'Server(id: $id, name: $name, hostname: $hostname, port: $port, username: $username, password: $password, privateKey: $privateKey, authType: $authType, status: $status, lastCpu: $lastCpu, lastRam: $lastRam, lastDisk: $lastDisk, lastSeen: $lastSeen, osDistro: $osDistro, kernelVersion: $kernelVersion, uptime: $uptime, hostnameInfo: $hostnameInfo, ipAddress: $ipAddress, serverLocation: $serverLocation, lastLatency: $lastLatency, lastDiskUsed: $lastDiskUsed, lastDiskTotal: $lastDiskTotal)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ServerCopyWith<$Res> implements $ServerCopyWith<$Res> {
+  factory _$ServerCopyWith(_Server value, $Res Function(_Server) _then) = __$ServerCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String name, String hostname, int port, String username, String password, String? privateKey, AuthType authType, ServerStatus status, double? lastCpu, double? lastRam, double? lastDisk, DateTime? lastSeen, String osDistro, String kernelVersion, String uptime, String hostnameInfo, String ipAddress, String serverLocation, int lastLatency, int lastDiskUsed, int lastDiskTotal
+});
+
+
+
+
+}
+/// @nodoc
+class __$ServerCopyWithImpl<$Res>
+    implements _$ServerCopyWith<$Res> {
+  __$ServerCopyWithImpl(this._self, this._then);
+
+  final _Server _self;
+  final $Res Function(_Server) _then;
+
+/// Create a copy of Server
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? hostname = null,Object? port = null,Object? username = null,Object? password = null,Object? privateKey = freezed,Object? authType = null,Object? status = null,Object? lastCpu = freezed,Object? lastRam = freezed,Object? lastDisk = freezed,Object? lastSeen = freezed,Object? osDistro = null,Object? kernelVersion = null,Object? uptime = null,Object? hostnameInfo = null,Object? ipAddress = null,Object? serverLocation = null,Object? lastLatency = null,Object? lastDiskUsed = null,Object? lastDiskTotal = null,}) {
+  return _then(_Server(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,hostname: null == hostname ? _self.hostname : hostname // ignore: cast_nullable_to_non_nullable
+as String,port: null == port ? _self.port : port // ignore: cast_nullable_to_non_nullable
+as int,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
+as String,privateKey: freezed == privateKey ? _self.privateKey : privateKey // ignore: cast_nullable_to_non_nullable
+as String?,authType: null == authType ? _self.authType : authType // ignore: cast_nullable_to_non_nullable
+as AuthType,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as ServerStatus,lastCpu: freezed == lastCpu ? _self.lastCpu : lastCpu // ignore: cast_nullable_to_non_nullable
+as double?,lastRam: freezed == lastRam ? _self.lastRam : lastRam // ignore: cast_nullable_to_non_nullable
+as double?,lastDisk: freezed == lastDisk ? _self.lastDisk : lastDisk // ignore: cast_nullable_to_non_nullable
+as double?,lastSeen: freezed == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
+as DateTime?,osDistro: null == osDistro ? _self.osDistro : osDistro // ignore: cast_nullable_to_non_nullable
+as String,kernelVersion: null == kernelVersion ? _self.kernelVersion : kernelVersion // ignore: cast_nullable_to_non_nullable
+as String,uptime: null == uptime ? _self.uptime : uptime // ignore: cast_nullable_to_non_nullable
+as String,hostnameInfo: null == hostnameInfo ? _self.hostnameInfo : hostnameInfo // ignore: cast_nullable_to_non_nullable
+as String,ipAddress: null == ipAddress ? _self.ipAddress : ipAddress // ignore: cast_nullable_to_non_nullable
+as String,serverLocation: null == serverLocation ? _self.serverLocation : serverLocation // ignore: cast_nullable_to_non_nullable
+as String,lastLatency: null == lastLatency ? _self.lastLatency : lastLatency // ignore: cast_nullable_to_non_nullable
+as int,lastDiskUsed: null == lastDiskUsed ? _self.lastDiskUsed : lastDiskUsed // ignore: cast_nullable_to_non_nullable
+as int,lastDiskTotal: null == lastDiskTotal ? _self.lastDiskTotal : lastDiskTotal // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+// dart format on

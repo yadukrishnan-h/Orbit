@@ -34,7 +34,7 @@ class SystemCard extends StatelessWidget {
                     title!,
                     style: AppTheme.cardTitleStyle,
                   ),
-                if (trailing != null) trailing!,
+                ?trailing,
               ],
             ),
             const SizedBox(height: 16),

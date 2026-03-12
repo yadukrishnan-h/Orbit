@@ -9,6 +9,7 @@ import 'package:orbit/features/terminal/presentation/screens/terminal_screen.dar
 import 'package:orbit/features/server_details/presentation/screens/server_details_screen.dart';
 import 'package:orbit/features/settings/presentation/screens/settings_screen.dart';
 import 'package:orbit/features/settings/presentation/screens/manage_servers_screen.dart';
+import 'package:orbit/features/settings/presentation/screens/change_pin_screen.dart';
 import 'package:orbit/core/models/server.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -87,6 +88,10 @@ final router = GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/change-pin',
+          builder: (context, state) => const ChangePinScreen(),
         ),
         GoRoute(
           path: '/manage-servers',

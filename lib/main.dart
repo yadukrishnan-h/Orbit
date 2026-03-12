@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orbit/core/router/app_router.dart';
 import 'package:orbit/core/theme/app_theme.dart';
@@ -6,9 +7,35 @@ import 'package:orbit/core/providers/connection_status_provider.dart';
 import 'package:orbit/core/widgets/loading_overlay.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/settings/providers/settings_provider.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
+import 'package:orbit/features/auth/presentation/screens/pin_setup_screen.dart';
+import 'package:orbit/features/auth/presentation/screens/pin_unlock_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:orbit/core/data/entities/hive_server.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  
+  try {
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(HiveServerAdapter());
+    }
+    await Hive.openBox<HiveServer>('servers');
+  } catch (e) {
+    debugPrint('Hive initialization error: $e');
+  }
+  
   runApp(const ProviderScope(child: MyApp()));
+}
+
+enum AuthState {
+  loading,
+  pinSetup,
+  biometricPrompt,
+  pinUnlock,
+  passed,
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -19,48 +46,63 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
-  /// Whether the biometric challenge has been passed this session.
-  bool _biometricPassed = false;
-
-  /// Whether we're currently showing the biometric prompt.
-  bool _challenging = false;
+  AuthState _authState = AuthState.loading;
+  bool _isChecking = false;
 
   @override
   void initState() {
     super.initState();
-    // Trigger a biometric check shortly after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkBiometrics());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _determineAuthState());
   }
 
-  Future<void> _checkBiometrics() async {
-    if (_biometricPassed || _challenging) return;
+  Future<void> _determineAuthState() async {
+    if (_isChecking || _authState == AuthState.passed) return;
+    setState(() => _isChecking = true);
 
-    // Wait until settings have loaded
-    final settings = await ref.read(settingsProvider.future);
+    try {
+      final storage = ref.read(secureStorageServiceProvider);
+      final masterPin = await storage.readMasterPin();
 
-    if (!settings.isBiometricsEnabled) {
-      if (mounted) setState(() => _biometricPassed = true);
-      return;
-    }
-
-    setState(() => _challenging = true);
-
-    final biometricService = ref.read(biometricServiceProvider);
-    final passed = await biometricService.authenticate(
-      reason: 'Authenticate to access Orbit',
-    );
-
-    if (mounted) {
-      setState(() {
-        _biometricPassed = passed;
-        _challenging = false;
-      });
-
-      // Retry if failed (prevent app use without authentication)
-      if (!passed) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        _checkBiometrics();
+      if (masterPin == null || masterPin.isEmpty || masterPin == 'null') {
+        if (mounted) {
+          setState(() {
+            _authState = AuthState.pinSetup;
+            _isChecking = false;
+          });
+        }
+        return;
       }
+
+      final settings = await ref.read(settingsProvider.future);
+
+      if (settings.isBiometricsEnabled) {
+        if (mounted) setState(() => _authState = AuthState.biometricPrompt);
+        
+        final biometricService = ref.read(biometricServiceProvider);
+        final passed = await biometricService.authenticate(
+          reason: 'Authenticate to access Orbit',
+        );
+
+        if (mounted) {
+          if (passed) {
+            setState(() => _authState = AuthState.passed);
+          } else {
+            // Fallback to PIN
+            setState(() => _authState = AuthState.pinUnlock);
+          }
+        }
+      } else {
+        if (mounted) setState(() => _authState = AuthState.pinUnlock);
+      }
+    } catch (e) {
+      debugPrint('Error determining auth state: $e');
+      if (mounted) {
+        setState(() {
+          _authState = AuthState.pinSetup;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isChecking = false);
     }
   }
 
@@ -78,12 +120,24 @@ class _MyAppState extends ConsumerState<MyApp> {
       locale: Locale(languageCode),
       builder: (context, child) {
         // Wait for settings to load before rendering anything
-        if (isSettingsLoading) {
+        if (isSettingsLoading || _authState == AuthState.loading) {
           return const _SplashScreen();
         }
 
-        // Show biometric gate
-        if (!_biometricPassed) {
+        // Authentication Gates
+        if (_authState == AuthState.pinSetup) {
+          return PinSetupScreen(
+            onSuccess: () => setState(() => _authState = AuthState.passed),
+          );
+        }
+
+        if (_authState == AuthState.pinUnlock) {
+          return PinUnlockScreen(
+            onSuccess: () => setState(() => _authState = AuthState.passed),
+          );
+        }
+
+        if (_authState == AuthState.biometricPrompt) {
           return const _BiometricGateScreen();
         }
 
@@ -131,7 +185,7 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
-/// Shown when biometrics are enabled but not yet passed
+/// Shown when biometrics are running
 class _BiometricGateScreen extends StatelessWidget {
   const _BiometricGateScreen();
 

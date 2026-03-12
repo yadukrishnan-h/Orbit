@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/localization/app_localization.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/dashboard/models/server_stats.dart';
 
@@ -24,7 +25,7 @@ class SystemInfoCard extends ConsumerWidget {
         color: AppTheme.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
           side: const BorderSide(color: AppTheme.border),
         ),
         child: Padding(

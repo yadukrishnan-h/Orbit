@@ -8,7 +8,8 @@ import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/dashboard/repositories/server_repository.dart';
 import 'package:orbit/features/dashboard/providers/dashboard_providers.dart';
 import 'package:orbit/features/settings/providers/settings_provider.dart';
-import 'package:orbit/core/services/isar_service.dart';
+import 'package:orbit/core/services/hive_service.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 
 class ManageServersScreen extends ConsumerStatefulWidget {
   const ManageServersScreen({super.key});
@@ -97,8 +98,9 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
     }
 
     // Perform bulk delete via repository
-    final isar = await ref.read(isarProvider.future);
-    final repository = ServerRepository(isar);
+    final hiveBox = await ref.read(hiveProvider.future);
+    final secureStorage = ref.read(secureStorageServiceProvider);
+    final repository = ServerRepository(hiveBox, secureStorage);
     await repository.bulkDelete(_selectedIds.toList());
 
     if (mounted) {
@@ -119,8 +121,9 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
 
     final orderedIds = reordered.map((s) => s.id).toList();
 
-    final isar = await ref.read(isarProvider.future);
-    final repository = ServerRepository(isar);
+    final hiveBox = await ref.read(hiveProvider.future);
+    final secureStorage = ref.read(secureStorageServiceProvider);
+    final repository = ServerRepository(hiveBox, secureStorage);
     await repository.reorderServers(orderedIds);
   }
 

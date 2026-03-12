@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🛰️ Orbit
 
@@ -31,12 +31,14 @@ Orbit is designed with a clean, dark-first aesthetic and a layered feature-per-s
 ## ✨ Features
 
 - **Fleet Overview**: Monitor all your connected servers from a single, easy-to-read dashboard.
-- **Real-Time Monitoring**: Live charts tracking CPU, RAM, Disk, and Network latency.
+- **Real-Time Monitoring**: Live charts tracking CPU, RAM, Disk, and Network latency using high-performance Hive (NoSQL) storage.
 - **Advanced SFTP Client**: Fully-featured file manager. Browse, upload, download, rename, and delete files remotely.
-- **Full SSH Terminal & Command Execution**: Run terminal commands directly from your device.
-- **Background Active Monitoring**: Connections stay persistent so your monitoring data is always ready when you open the app.
+- **Full SSH Terminal & Command Execution**: Run terminal commands directly from your device with batched output processing.
+- **Background Active Monitoring**: Connections stay persistent with off-main-thread metric parsing (Isolates).
+- **Secure by Design**: All sensitive data is stored in the OS-level encrypted enclave (`flutter_secure_storage`).
+- **Advanced Authentication**: Persistent 3-phase Master PIN lockout with brute-force protection.
+- **Android 15 Ready**: Full support for Edge-to-Edge displays and 16 KB memory page alignment for next-gen hardware.
 - **Dark-First Modern UI**: Designed for clarity, aesthetics, and smooth user experience.
-- **Secure by Design**: Credentials and connections are handled securely with robust encryption.
 
 ---
 
@@ -48,6 +50,8 @@ Orbit is designed with a clean, dark-first aesthetic and a layered feature-per-s
 - Android Studio / Xcode for deploying to emulators or physical devices.
 
 ### Installation
+
+📥 **Direct Download:** You can download the latest production APK directly from the [Releases](https://github.com/yadukrishnan-h/orbit/releases) section of this repository.
 
 1. **Clone the repository**
 
@@ -72,8 +76,11 @@ Orbit is designed with a clean, dark-first aesthetic and a layered feature-per-s
 ## 🛠️ Architecture & Tech Stack
 
 - **Framework**: [Flutter](https://flutter.dev/)
-- **SSH/SFTP**: Native Dart implementations for secure shell and file transfer protocols.
-- **UI/UX**: Custom themed material components with a focus on dark mode and accessibility.
+- **State Management**: [Riverpod](https://riverpod.dev/) for reactive, thread-safe application state.
+- **Database**: [Hive](https://pub.dev/packages/hive) for high-performance, encrypted NoSQL storage.
+- **Security**: [Flutter Secure Storage](https://pub.dev/packages/flutter_secure_storage) for OS-level keychain/keystore encryption (AES-256).
+- **SSH/SFTP**: [dartssh2](https://pub.dev/packages/dartssh2) for robust, high-performance remote terminal and file management.
+- **Concurrency**: Background [Isolates](https://api.flutter.dev/flutter/dart-isolate/Isolate-class.html) for non-blocking metric parsing and monitoring.
 
 ---
 
