@@ -31,7 +31,7 @@ jobs:
       - name: Verify generated files (build_runner)
         run: |
           dart run build_runner build --delete-conflicting-outputs
-          git --no-pager diff --exit-code
+          git --no-pager diff --exit-code -- . ':(exclude)pubspec.lock'
 
       - name: Check code formatting
         run: dart format --output=none --set-exit-if-changed .

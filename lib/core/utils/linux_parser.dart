@@ -26,12 +26,14 @@ class CpuTicks {
       // 2. Extract numbers using Regex (handles multiple spaces)
       // Matches: cpu  <user> <nice> <system> <idle> <iowait> <irq> <softirq> <steal>
       final RegExp regExp = RegExp(
-          r'cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?');
+        r'cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?',
+      );
       final match = regExp.firstMatch(cpuLine);
 
       if (match == null) {
         debugPrint(
-            "CpuTicks Parser Error: Regex failed to match line: $cpuLine");
+          "CpuTicks Parser Error: Regex failed to match line: $cpuLine",
+        );
         return CpuTicks(0, 0);
       }
 
@@ -62,6 +64,9 @@ class CpuTicks {
 }
 
 class LinuxParser {
+  static const String linuxMetricsCommand =
+      r'cat /proc/stat; echo "|||"; free -b; echo "|||"; df -k /; echo "|||"; cat /proc/uptime; echo "|||"; hostname; echo "|||"; hostname -I || ip addr show; echo "|||"; cat /etc/os-release; echo "|||"; uname -r; exit';
+
   static final RegExp _whiteSpace = RegExp(r'\s+');
 
   /// Parses /proc/stat CPU line: "cpu  2255 34 2290 22625563 6290 127 456"
@@ -96,7 +101,11 @@ class LinuxParser {
   /// Calculates CPU usage percentage from two snapshots (raw ticks).
   /// Returns a value between 0.0 and 100.0 with high precision.
   static double calculateCpuPercent(
-      int prevIdle, int prevTotal, int currIdle, int currTotal) {
+    int prevIdle,
+    int prevTotal,
+    int currIdle,
+    int currTotal,
+  ) {
     final totalDelta = (currTotal - prevTotal).toDouble();
     final idleDelta = (currIdle - prevIdle).toDouble();
 
@@ -215,13 +224,17 @@ class LinuxParser {
   }
 
   /// Bulletproof parsing of atomic output
-  static Map<String, dynamic> parseAll(String raw,
-      {int prevIdle = 0, int prevTotal = 0}) {
+  static Map<String, dynamic> parseAll(
+    String raw, {
+    int prevIdle = 0,
+    int prevTotal = 0,
+  }) {
     final parts = raw.split('|||');
 
     if (parts.length < 4) {
       throw FormatException(
-          'Incomplete data: Expected 4 parts, got ${parts.length}');
+        'Incomplete data: Expected 4 parts, got ${parts.length}',
+      );
     }
 
     // 1. CPU - Use new CpuTicks parser
@@ -238,8 +251,11 @@ class LinuxParser {
     final ramPct = _safeParseDouble(parts[1], parseRam, 0.0);
 
     // 3. Disk
-    final diskData =
-        _safeParseMap(parts[2], parseDisk, {'pct': 0.0, 'used': 0, 'total': 0});
+    final diskData = _safeParseMap(parts[2], parseDisk, {
+      'pct': 0.0,
+      'used': 0,
+      'total': 0,
+    });
     final diskPct = diskData['pct'] as double;
     final diskUsed = diskData['used'] as int;
     final diskTotal = diskData['total'] as int;
@@ -261,8 +277,9 @@ class LinuxParser {
     String osDistro = 'Linux';
     if (rawOsRelease.isNotEmpty) {
       // Look for PRETTY_NAME="Ubuntu 22.04 LTS"
-      final prettyNameMatch =
-          RegExp(r'PRETTY_NAME="([^"]+)"').firstMatch(rawOsRelease);
+      final prettyNameMatch = RegExp(
+        r'PRETTY_NAME="([^"]+)"',
+      ).firstMatch(rawOsRelease);
       if (prettyNameMatch != null) {
         osDistro = prettyNameMatch.group(1) ?? 'Linux';
       } else {
@@ -293,7 +310,10 @@ class LinuxParser {
   }
 
   static double _safeParseDouble(
-      String raw, double Function(String) parser, double fallback) {
+    String raw,
+    double Function(String) parser,
+    double fallback,
+  ) {
     try {
       return parser(raw);
     } catch (e) {
@@ -302,7 +322,10 @@ class LinuxParser {
   }
 
   static String _safeParseString(
-      String raw, String Function(String) parser, String fallback) {
+    String raw,
+    String Function(String) parser,
+    String fallback,
+  ) {
     try {
       return parser(raw);
     } catch (e) {
@@ -311,9 +334,10 @@ class LinuxParser {
   }
 
   static Map<String, dynamic> _safeParseMap(
-      String raw,
-      Map<String, dynamic> Function(String) parser,
-      Map<String, dynamic> fallback) {
+    String raw,
+    Map<String, dynamic> Function(String) parser,
+    Map<String, dynamic> fallback,
+  ) {
     try {
       return parser(raw);
     } catch (e) {

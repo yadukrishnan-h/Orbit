@@ -3,20 +3,12 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'server.freezed.dart';
 part 'server.g.dart';
 
-enum AuthType {
-  password,
-  key,
-}
+enum AuthType { password, key }
 
-enum ServerStatus {
-  unknown,
-  online,
-  offline,
-  error,
-}
+enum ServerStatus { unknown, online, offline, error }
 
 @freezed
-class Server with _$Server {
+abstract class Server with _$Server {
   const factory Server({
     required String id,
     required String name,
@@ -24,6 +16,7 @@ class Server with _$Server {
     required int port,
     required String username,
     required String password, // Added password field
+    String? privateKey, // Added private key field
     required AuthType authType,
     @Default(ServerStatus.unknown) ServerStatus status,
 

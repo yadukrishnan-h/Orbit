@@ -29,12 +29,8 @@ class SystemCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (title != null)
-                  Text(
-                    title!,
-                    style: AppTheme.cardTitleStyle,
-                  ),
-                if (trailing != null) trailing!,
+                if (title != null) Text(title!, style: AppTheme.cardTitleStyle),
+                ?trailing,
               ],
             ),
             const SizedBox(height: 16),

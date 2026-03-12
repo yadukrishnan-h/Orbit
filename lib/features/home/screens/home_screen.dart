@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/home/widgets/server_summary_card.dart';
@@ -50,7 +51,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<Server> _filterServers(List<Server> servers) {
     return servers.where((server) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           server.name.toLowerCase().contains(_searchQuery) ||
           server.hostname.toLowerCase().contains(_searchQuery);
 
@@ -101,12 +103,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               decoration: InputDecoration(
                 hintText: ref.tr('filter_systems'),
                 hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                prefixIcon: const Icon(LucideIcons.search,
-                    color: AppTheme.textSecondary),
+                prefixIcon: const Icon(
+                  LucideIcons.search,
+                  color: AppTheme.textSecondary,
+                ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(LucideIcons.x,
-                            size: 18, color: AppTheme.textSecondary),
+                        icon: const Icon(
+                          LucideIcons.x,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           _onSearchChanged('');
@@ -116,19 +123,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 filled: true,
                 fillColor: AppTheme.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.border),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.border),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.primary),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               style: const TextStyle(color: AppTheme.textPrimary),
             ),
@@ -194,8 +203,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(LucideIcons.server,
-                              size: 64, color: AppTheme.border),
+                          const Icon(
+                            LucideIcons.server,
+                            size: 64,
+                            color: AppTheme.border,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             _searchQuery.isNotEmpty
@@ -234,15 +246,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(LucideIcons.alertCircle,
-                          size: 48, color: AppTheme.critical),
+                      const Icon(
+                        LucideIcons.alertCircle,
+                        size: 48,
+                        color: AppTheme.critical,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Error loading servers',

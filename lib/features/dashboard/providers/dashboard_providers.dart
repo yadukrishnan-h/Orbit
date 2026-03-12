@@ -11,21 +11,25 @@ import 'package:orbit/features/dashboard/viewmodels/server_monitor_viewmodel.dar
 /// Manages persistent SSH connections and background polling
 final serverMonitorViewModelProvider =
     AsyncNotifierProvider<ServerMonitorViewModel, void>(() {
-  return ServerMonitorViewModel();
-});
+      return ServerMonitorViewModel();
+    });
 
 /// Stream provider for watching a single server by ID
 /// Returns reactive updates from the database
-final serverStreamProvider =
-    StreamProvider.family<Server?, String>((ref, serverId) async* {
+final serverStreamProvider = StreamProvider.family<Server?, String>((
+  ref,
+  serverId,
+) async* {
   final repository = await ref.watch(serverRepositoryProvider.future);
   yield* repository.watchServer(serverId);
 });
 
 /// History provider for charts
 /// Accessed by UI to get historical data for a specific server
-final serverHistoryProvider =
-    Provider.family<List<ServerStats>, String>((ref, serverId) {
+final serverHistoryProvider = Provider.family<List<ServerStats>, String>((
+  ref,
+  serverId,
+) {
   ref.watch(serverMonitorViewModelProvider);
   final vm = ref.read(serverMonitorViewModelProvider.notifier);
   return vm.getHistory(serverId);
@@ -36,9 +40,9 @@ final serverHistoryProvider =
 /// every successful poll AND on every connection state transition.
 final serverConnectionStateProvider =
     Provider.family<SshConnectionState, String>((ref, serverId) {
-  // Watch the VM so this provider rebuilds on every VM state emission
-  ref.watch(serverMonitorViewModelProvider);
-  return ref
-      .read(serverMonitorViewModelProvider.notifier)
-      .getConnectionState(serverId);
-});
+      // Watch the VM so this provider rebuilds on every VM state emission
+      ref.watch(serverMonitorViewModelProvider);
+      return ref
+          .read(serverMonitorViewModelProvider.notifier)
+          .getConnectionState(serverId);
+    });

@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/localization/app_localization.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/dashboard/models/server_stats.dart';
 
 class SystemInfoCard extends ConsumerWidget {
   final ServerStats stats;
 
-  const SystemInfoCard({
-    super.key,
-    required this.stats,
-  });
+  const SystemInfoCard({super.key, required this.stats});
 
   // Cache text styles as static finals
   static final TextStyle _labelStyle = AppTheme.infoLabelStyle;
@@ -24,7 +22,7 @@ class SystemInfoCard extends ConsumerWidget {
         color: AppTheme.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
           side: const BorderSide(color: AppTheme.border),
         ),
         child: Padding(
@@ -35,8 +33,9 @@ class SystemInfoCard extends ConsumerWidget {
                 context,
                 icon: LucideIcons.server,
                 label: ref.tr('hostname'),
-                value:
-                    stats.hostname.isEmpty ? ref.tr('unknown') : stats.hostname,
+                value: stats.hostname.isEmpty
+                    ? ref.tr('unknown')
+                    : stats.hostname,
               ),
               const Divider(color: AppTheme.border, height: 24),
               _buildInfoItem(
@@ -52,8 +51,9 @@ class SystemInfoCard extends ConsumerWidget {
                 context,
                 icon: LucideIcons.monitor,
                 label: ref.tr('distro'),
-                value:
-                    stats.osDistro.isEmpty ? ref.tr('unknown') : stats.osDistro,
+                value: stats.osDistro.isEmpty
+                    ? ref.tr('unknown')
+                    : stats.osDistro,
               ),
               const Divider(color: AppTheme.border, height: 24),
               _buildInfoItem(
@@ -87,18 +87,19 @@ class SystemInfoCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoItem(BuildContext context,
-      {required IconData icon, required String label, required String value}) {
+  Widget _buildInfoItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 18, color: AppTheme.textSecondary),
         const SizedBox(width: 12),
         Text(label, style: _labelStyle),
         const Spacer(),
-        Text(
-          value,
-          style: _valueStyle,
-        ),
+        Text(value, style: _valueStyle),
       ],
     );
   }

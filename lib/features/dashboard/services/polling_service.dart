@@ -10,11 +10,11 @@ import 'package:orbit/features/dashboard/models/server_stats.dart';
 import 'package:orbit/core/services/geolocation_service.dart';
 
 // StreamProvider family to provide separate streams for each server
-final serverStatsProvider =
-    StreamProvider.family.autoDispose<ServerStats, Server>((ref, server) {
-  final pollingService = ref.watch(pollingServiceProvider);
-  return pollingService.streamStats(server);
-});
+final serverStatsProvider = StreamProvider.family
+    .autoDispose<ServerStats, Server>((ref, server) {
+      final pollingService = ref.watch(pollingServiceProvider);
+      return pollingService.streamStats(server);
+    });
 
 final pollingServiceProvider = Provider<PollingService>((ref) {
   // serverServiceProvider is a FutureProvider, so we must use the AsyncValue property carefully
@@ -69,15 +69,21 @@ class PollingService {
 
         try {
           final stopwatch = Stopwatch()..start();
-          final rawOutput =
-              await _runCommand(client, pollingCmd, timeoutSeconds: 15);
+          final rawOutput = await _runCommand(
+            client,
+            pollingCmd,
+            timeoutSeconds: 15,
+          );
           stopwatch.stop();
           latencyMs = stopwatch.elapsedMilliseconds;
 
           // Bulletproof Parsing (Danger Zone)
           try {
-            final statsMap = LinuxParser.parseAll(rawOutput,
-                prevIdle: prevIdle, prevTotal: prevTotal);
+            final statsMap = LinuxParser.parseAll(
+              rawOutput,
+              prevIdle: prevIdle,
+              prevTotal: prevTotal,
+            );
 
             cpuPct = statsMap['cpuPct'];
             ramPct = statsMap['ramPct'];
@@ -98,8 +104,9 @@ class PollingService {
 
           if (serverLocation.isEmpty && ipAddress.isNotEmpty) {
             try {
-              serverLocation =
-                  await GeolocationService.getLocationFromIp(ipAddress);
+              serverLocation = await GeolocationService.getLocationFromIp(
+                ipAddress,
+              );
             } catch (e) {
               debugPrint('Polling Service: Error fetching geolocation: $e');
             }
@@ -155,16 +162,21 @@ class PollingService {
     }
   }
 
-  Future<String> _runCommand(SSHClient client, String command,
-      {int timeoutSeconds = 5}) async {
+  Future<String> _runCommand(
+    SSHClient client,
+    String command, {
+    int timeoutSeconds = 5,
+  }) async {
     try {
-      final result = await client.run(command).timeout(
-        Duration(seconds: timeoutSeconds),
-        onTimeout: () {
-          debugPrint('SSH: Command "$command" timed out!');
-          throw TimeoutException('Command execution timed out');
-        },
-      );
+      final result = await client
+          .run(command)
+          .timeout(
+            Duration(seconds: timeoutSeconds),
+            onTimeout: () {
+              debugPrint('SSH: Command "$command" timed out!');
+              throw TimeoutException('Command execution timed out');
+            },
+          );
       return utf8.decode(result);
     } catch (e) {
       debugPrint('SSH: Command execution failed: $e');

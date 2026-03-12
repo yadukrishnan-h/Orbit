@@ -6,10 +6,9 @@ import 'package:orbit/features/settings/providers/settings_provider.dart';
 /// Provider exposing the current language code.
 /// Reads from settingsProvider; defaults to 'en' while loading.
 final currentLanguageProvider = Provider<String>((ref) {
-  return ref.watch(settingsProvider).maybeWhen(
-        data: (s) => s.languageCode,
-        orElse: () => 'en',
-      );
+  return ref
+      .watch(settingsProvider)
+      .maybeWhen(data: (s) => s.languageCode, orElse: () => 'en');
 });
 
 /// Extension on [BuildContext] for easy in-widget translation.

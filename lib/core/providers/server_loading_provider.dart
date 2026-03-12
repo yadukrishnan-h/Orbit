@@ -68,10 +68,7 @@ class ServerLoadingNotifier
   /// Clear error state for retry
   void clearError(String serverId) {
     final currentState = state[serverId] ?? const ServerLoadingState();
-    state = {
-      ...state,
-      serverId: currentState.copyWith(errorMessage: null),
-    };
+    state = {...state, serverId: currentState.copyWith(errorMessage: null)};
   }
 
   /// Get loading state for a specific server
@@ -88,10 +85,11 @@ class ServerLoadingNotifier
 }
 
 /// Provider for server loading states
-final serverLoadingProvider = StateNotifierProvider<ServerLoadingNotifier,
-    Map<String, ServerLoadingState>>(
-  (ref) => ServerLoadingNotifier(),
-);
+final serverLoadingProvider =
+    StateNotifierProvider<
+      ServerLoadingNotifier,
+      Map<String, ServerLoadingState>
+    >((ref) => ServerLoadingNotifier());
 
 /// Extension to easily get loading state
 extension ServerLoadingExtension on WidgetRef {

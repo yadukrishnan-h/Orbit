@@ -22,8 +22,9 @@ class BiometricService {
   ///
   /// local_auth 3.x: The `options` parameter was removed. Authentication
   /// options are now passed as direct named parameters to `authenticate()`.
-  Future<bool> authenticate(
-      {String reason = 'Authenticate to continue'}) async {
+  Future<bool> authenticate({
+    String reason = 'Authenticate to continue',
+  }) async {
     try {
       return await _auth.authenticate(
         localizedReason: reason,

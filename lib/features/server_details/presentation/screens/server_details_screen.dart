@@ -80,16 +80,28 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
               child: Column(
                 children: [
                   _buildDetailRow(
-                      LucideIcons.globe, 'Hostname', widget.server.hostname),
+                    LucideIcons.globe,
+                    'Hostname',
+                    widget.server.hostname,
+                  ),
                   const Divider(color: AppTheme.border, height: 24),
                   _buildDetailRow(
-                      LucideIcons.hash, 'Port', widget.server.port.toString()),
+                    LucideIcons.hash,
+                    'Port',
+                    widget.server.port.toString(),
+                  ),
                   const Divider(color: AppTheme.border, height: 24),
                   _buildDetailRow(
-                      LucideIcons.user, 'Username', widget.server.username),
+                    LucideIcons.user,
+                    'Username',
+                    widget.server.username,
+                  ),
                   const Divider(color: AppTheme.border, height: 24),
-                  _buildDetailRow(LucideIcons.shield, 'Auth Type',
-                      widget.server.authType.name),
+                  _buildDetailRow(
+                    LucideIcons.shield,
+                    'Auth Type',
+                    widget.server.authType.name,
+                  ),
                 ],
               ),
             ),
@@ -102,15 +114,17 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
               child: Column(
                 children: [
                   _buildDetailRow(
-                      LucideIcons.fingerprint, 'Server ID', widget.server.id),
+                    LucideIcons.fingerprint,
+                    'Server ID',
+                    widget.server.id,
+                  ),
                   const Divider(color: AppTheme.border, height: 24),
                   _buildDetailRow(
                     LucideIcons.calendar,
                     'Added On',
-                    widget.server.lastSeen
-                            ?.toLocal()
-                            .toString()
-                            .split('.')[0] ??
+                    widget.server.lastSeen?.toLocal().toString().split(
+                          '.',
+                        )[0] ??
                         'Unknown',
                   ),
                 ],
@@ -129,7 +143,9 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
                   Text(
                     'Test your SSH credentials by performing a simple "whoami" command.',
                     style: GoogleFonts.inter(
-                        fontSize: 13, color: AppTheme.textSecondary),
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -141,14 +157,17 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppTheme.primary),
+                              strokeWidth: 2,
+                              color: AppTheme.primary,
+                            ),
                           )
                         : const Text('Run Test Connection'),
                   ),
@@ -213,10 +232,14 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
           label,
           style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: AppTheme.infoValueStyle.copyWith(fontSize: 13),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: AppTheme.infoValueStyle.copyWith(fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -243,7 +266,7 @@ class _ServerDetailsScreenState extends ConsumerState<ServerDetailsScreen> {
         widget.server.hostname,
         widget.server.port,
         widget.server.username,
-        widget.server.password,
+        widget.server.id,
         'whoami',
       );
       setState(() {

@@ -22,8 +22,11 @@ class PollIntervalTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: const Icon(LucideIcons.refreshCw,
-          color: AppTheme.textSecondary, size: 20),
+      leading: const Icon(
+        LucideIcons.refreshCw,
+        color: AppTheme.textSecondary,
+        size: 20,
+      ),
       title: Text(
         ref.tr('auto_refresh'),
         style: GoogleFonts.inter(
@@ -36,68 +39,84 @@ class PollIntervalTile extends ConsumerWidget {
         'Every ${currentInterval}s',
         style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
       ),
-      trailing: const Icon(LucideIcons.chevronRight,
-          color: AppTheme.textSecondary, size: 18),
+      trailing: const Icon(
+        LucideIcons.chevronRight,
+        color: AppTheme.textSecondary,
+        size: 18,
+      ),
       onTap: () => _showIntervalDialog(context, ref, currentInterval),
     );
   }
 
   Future<void> _showIntervalDialog(
-      BuildContext context, WidgetRef ref, int currentInterval) async {
+    BuildContext context,
+    WidgetRef ref,
+    int currentInterval,
+  ) async {
     int selected = currentInterval;
 
     await showDialog<void>(
       context: context,
       builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setState) {
-          return AlertDialog(
-            backgroundColor: AppTheme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: AppTheme.border),
-            ),
-            title: Text(
-              ref.tr('auto_refresh_interval'),
-              style: GoogleFonts.inter(
-                  color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
-            ),
-            content: RadioGroup<int>(
-              groupValue: selected,
-              onChanged: (val) {
-                if (val != null) setState(() => selected = val);
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: AppSettings.pollIntervals.map((secs) {
-                  return RadioListTile<int>(
-                    value: secs,
-                    title: Text(
-                      secs == 1
-                          ? ref.tr('1_second')
-                          : '$secs ${ref.tr('n_seconds').replaceFirst('%d', '')}',
-                      style: GoogleFonts.inter(color: AppTheme.textPrimary),
-                    ),
-                  );
-                }).toList(),
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppTheme.border),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(ref.tr('cancel'),
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+              title: Text(
+                ref.tr('auto_refresh_interval'),
+                style: GoogleFonts.inter(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              TextButton(
-                onPressed: () {
-                  ref.read(settingsProvider.notifier).setPollInterval(selected);
-                  Navigator.pop(ctx);
+              content: RadioGroup<int>(
+                groupValue: selected,
+                onChanged: (val) {
+                  if (val != null) setState(() => selected = val);
                 },
-                child: Text(ref.tr('apply'),
-                    style: GoogleFonts.inter(color: AppTheme.primary)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: AppSettings.pollIntervals.map((secs) {
+                    return RadioListTile<int>(
+                      value: secs,
+                      title: Text(
+                        secs == 1
+                            ? ref.tr('1_second')
+                            : '$secs ${ref.tr('n_seconds').replaceFirst('%d', '')}',
+                        style: GoogleFonts.inter(color: AppTheme.textPrimary),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-            ],
-          );
-        });
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    ref.tr('cancel'),
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setPollInterval(selected);
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(
+                    ref.tr('apply'),
+                    style: GoogleFonts.inter(color: AppTheme.primary),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }

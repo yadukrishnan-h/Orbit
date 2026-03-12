@@ -9,6 +9,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/terminal/providers/terminal_provider.dart';
 
@@ -82,8 +83,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       _historyIndex = up
           ? (_historyIndex + 1).clamp(0, _history.length - 1)
           : (_historyIndex - 1).clamp(-1, _history.length - 1);
-      _inputController.text =
-          _historyIndex == -1 ? '' : _history[_historyIndex];
+      _inputController.text = _historyIndex == -1
+          ? ''
+          : _history[_historyIndex];
       _inputController.selection = TextSelection.fromPosition(
         TextPosition(offset: _inputController.text.length),
       );
@@ -107,11 +109,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         duration: const Duration(milliseconds: 200),
         child: switch (state.status) {
           TerminalStatus.idle => _buildServerSelector(),
-          TerminalStatus.connecting =>
-            _buildOverlay(key: const ValueKey('connecting')),
+          TerminalStatus.connecting => _buildOverlay(
+            key: const ValueKey('connecting'),
+          ),
           TerminalStatus.connected => _buildTerminalView(state),
           TerminalStatus.disconnecting => _buildOverlay(
-              key: const ValueKey('disconnecting'), label: 'Disconnecting…'),
+            key: const ValueKey('disconnecting'),
+            label: 'Disconnecting…',
+          ),
           TerminalStatus.error => _buildErrorView(state),
         },
       ),
@@ -128,9 +133,12 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       titleWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(LucideIcons.terminal,
-              size: 18, color: AppTheme.textPrimary),
-          const SizedBox(width: 8),
+          const Icon(
+            LucideIcons.terminal,
+            size: 18,
+            color: AppTheme.textPrimary,
+          ),
+          const SizedBox(width: AppSizes.p8),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,10 +184,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         if (state.isConnected) ...[
           // Connected indicator dot
           Padding(
-            padding: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.only(right: AppSizes.p4),
             child: Container(
-              width: 8,
-              height: 8,
+              width: AppSizes.p8,
+              height: AppSizes.p8,
               decoration: BoxDecoration(
                 color: AppTheme.success,
                 shape: BoxShape.circle,
@@ -242,7 +250,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         if (servers.isEmpty) {
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(AppSizes.p32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -269,11 +277,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(LucideIcons.terminal,
-                          size: 52, color: AppTheme.primary),
+                      child: const Icon(
+                        LucideIcons.terminal,
+                        size: 52,
+                        color: AppTheme.primary,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSizes.p28),
                   Text(
                     ref.tr('no_servers_yet'),
                     style: GoogleFonts.inter(
@@ -282,7 +293,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSizes.p10),
                   Text(
                     ref.tr('add_server_prompt_terminal'),
                     style: GoogleFonts.inter(
@@ -302,7 +313,12 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
           children: [
             // ── Section Header ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSizes.p20,
+                AppSizes.p8,
+                AppSizes.p20,
+                0,
+              ),
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(milliseconds: 600),
@@ -322,10 +338,13 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(LucideIcons.terminal,
-                          size: 36, color: AppTheme.primary),
+                      child: const Icon(
+                        LucideIcons.terminal,
+                        size: 36,
+                        color: AppTheme.primary,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSizes.p16),
                     Text(
                       ref.tr('open_terminal'),
                       style: GoogleFonts.inter(
@@ -334,7 +353,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSizes.p6),
                     Text(
                       ref.tr('select_server_shell'),
                       style: GoogleFonts.inter(
@@ -342,7 +361,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                         color: AppTheme.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSizes.p24),
                   ],
                 ),
               ),
@@ -350,14 +369,19 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
 
             // Divider
             const Divider(color: AppTheme.border, height: 1),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSizes.p12),
 
             // ── Server List ──
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.p16,
+                  0,
+                  AppSizes.p16,
+                  AppSizes.p16,
+                ),
                 itemCount: servers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: AppSizes.p8),
                 itemBuilder: (context, index) =>
                     _ServerTile(server: servers[index]),
               ),
@@ -370,10 +394,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
 
   // ─── Connecting / Disconnecting Overlay ───────────────────────────────────
 
-  Widget _buildOverlay({
-    required Key key,
-    String label = 'Connecting…',
-  }) {
+  Widget _buildOverlay({required Key key, String label = 'Connecting…'}) {
     return BackdropFilter(
       key: key,
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -436,11 +457,15 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.critical.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border:
-                    Border.all(color: AppTheme.critical.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppTheme.critical.withValues(alpha: 0.3),
+                ),
               ),
-              child: const Icon(LucideIcons.wifiOff,
-                  size: 32, color: AppTheme.critical),
+              child: const Icon(
+                LucideIcons.wifiOff,
+                size: 32,
+                color: AppTheme.critical,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -459,13 +484,17 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 color: AppTheme.critical.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                    color: AppTheme.critical.withValues(alpha: 0.25)),
+                  color: AppTheme.critical.withValues(alpha: 0.25),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(LucideIcons.alertCircle,
-                      size: 16, color: AppTheme.critical),
+                  const Icon(
+                    LucideIcons.alertCircle,
+                    size: 16,
+                    color: AppTheme.critical,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -493,7 +522,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                     foregroundColor: AppTheme.textSecondary,
                     side: const BorderSide(color: AppTheme.border),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -515,7 +546,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -635,10 +668,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   color: AppTheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: AppTheme.primary.withValues(alpha: 0.3)),
+                    color: AppTheme.primary.withValues(alpha: 0.3),
+                  ),
                 ),
-                child: const Icon(LucideIcons.cornerDownLeft,
-                    size: 16, color: AppTheme.primary),
+                child: const Icon(
+                  LucideIcons.cornerDownLeft,
+                  size: 16,
+                  color: AppTheme.primary,
+                ),
               ),
             ),
           ),
@@ -685,8 +722,11 @@ class _ServerTile extends ConsumerWidget {
                   color: AppTheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(LucideIcons.server,
-                    size: 20, color: AppTheme.primary),
+                child: const Icon(
+                  LucideIcons.server,
+                  size: 20,
+                  color: AppTheme.primary,
+                ),
               ),
               const SizedBox(width: 14),
               // Info
@@ -745,8 +785,11 @@ class _ServerTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(LucideIcons.chevronRight,
-                  size: 16, color: AppTheme.textSecondary),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 16,
+                color: AppTheme.textSecondary,
+              ),
             ],
           ),
         ),
@@ -773,9 +816,7 @@ class _TerminalStatusBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        border: const Border(
-          bottom: BorderSide(color: AppTheme.border),
-        ),
+        border: const Border(bottom: BorderSide(color: AppTheme.border)),
       ),
       child: Row(
         children: [
@@ -787,8 +828,9 @@ class _TerminalStatusBar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                    color: AppTheme.success.withValues(alpha: 0.4),
-                    blurRadius: 5),
+                  color: AppTheme.success.withValues(alpha: 0.4),
+                  blurRadius: 5,
+                ),
               ],
             ),
           ),
@@ -814,10 +856,7 @@ class _TerminalStatusBar extends StatelessWidget {
           ),
           Text(
             'xterm-256color',
-            style: GoogleFonts.firaCode(
-              fontSize: 10,
-              color: AppTheme.disabled,
-            ),
+            style: GoogleFonts.firaCode(fontSize: 10, color: AppTheme.disabled),
           ),
         ],
       ),
@@ -830,10 +869,7 @@ class _TerminalStatusBar extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TerminalOutput extends StatelessWidget {
-  const _TerminalOutput({
-    required this.lines,
-    required this.scrollController,
-  });
+  const _TerminalOutput({required this.lines, required this.scrollController});
 
   final List<String> lines;
   final ScrollController scrollController;
@@ -844,10 +880,7 @@ class _TerminalOutput extends StatelessWidget {
       return Center(
         child: Text(
           'Waiting for shell…',
-          style: GoogleFonts.firaCode(
-            fontSize: 13,
-            color: AppTheme.disabled,
-          ),
+          style: GoogleFonts.firaCode(fontSize: 13, color: AppTheme.disabled),
         ),
       );
     }

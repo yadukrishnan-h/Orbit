@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orbit/core/providers.dart';
-import 'package:orbit/core/services/isar_service.dart';
+import 'package:orbit/core/services/hive_service.dart';
 
 /// Connection status enum
 enum ConnectionStatus {
@@ -47,8 +47,8 @@ class ConnectionState {
 /// Provider that manages the initial connection status
 final connectionStatusProvider =
     StateNotifierProvider<ConnectionStatusNotifier, ConnectionState>((ref) {
-  return ConnectionStatusNotifier(ref);
-});
+      return ConnectionStatusNotifier(ref);
+    });
 
 class ConnectionStatusNotifier extends StateNotifier<ConnectionState> {
   final Ref _ref;
@@ -62,8 +62,8 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionState> {
       // Update progress to indicate starting
       state = state.copyWith(progress: 0.1);
 
-      // Initialize Isar database via providers
-      await _ref.watch(isarProvider.future);
+      // Initialize Hive database via providers
+      await _ref.watch(hiveProvider.future);
       state = state.copyWith(progress: 0.3);
 
       // Initialize server service

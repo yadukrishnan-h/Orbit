@@ -32,13 +32,15 @@ class SettingsViewModel extends AsyncNotifier<AppSettings> {
 
   Future<void> setPollInterval(int seconds) async {
     await _prefs.setInt(_keyPollInterval, seconds);
-    state =
-        AsyncData(state.requireValue.copyWith(pollIntervalSeconds: seconds));
+    state = AsyncData(
+      state.requireValue.copyWith(pollIntervalSeconds: seconds),
+    );
   }
 
   Future<void> setBiometricsEnabled(bool enabled) async {
     await _prefs.setBool(_keyBiometrics, enabled);
-    state =
-        AsyncData(state.requireValue.copyWith(isBiometricsEnabled: enabled));
+    state = AsyncData(
+      state.requireValue.copyWith(isBiometricsEnabled: enabled),
+    );
   }
 }

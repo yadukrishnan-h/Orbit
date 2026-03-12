@@ -21,8 +21,11 @@ class BiometricsTile extends ConsumerWidget {
 
     return SwitchListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      secondary: const Icon(LucideIcons.fingerprint,
-          color: AppTheme.textSecondary, size: 20),
+      secondary: const Icon(
+        LucideIcons.fingerprint,
+        color: AppTheme.textSecondary,
+        size: 20,
+      ),
       title: Text(
         ref.tr('biometric_auth'),
         style: GoogleFonts.inter(
@@ -42,7 +45,10 @@ class BiometricsTile extends ConsumerWidget {
   }
 
   Future<void> _handleToggle(
-      BuildContext context, WidgetRef ref, bool newValue) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool newValue,
+  ) async {
     if (newValue) {
       // Enabling: prompt biometric to confirm user intends this
       final biometricService = ref.read(biometricServiceProvider);

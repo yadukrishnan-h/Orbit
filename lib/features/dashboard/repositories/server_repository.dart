@@ -1,163 +1,167 @@
-import 'package:isar/isar.dart';
-import 'package:orbit/core/data/entities/isar_server.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:orbit/core/data/entities/hive_server.dart';
 import 'package:orbit/core/models/server.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/features/dashboard/models/server_stats.dart';
 
 /// Repository layer for server data management
 /// Single source of truth for all server-related data operations
 class ServerRepository {
-  final Isar _isar;
+  final Box<HiveServer> _box;
+  final SecureStorageService _secureStorage;
 
-  ServerRepository(this._isar);
+  ServerRepository(this._box, this._secureStorage);
 
   /// Watch all servers as a reactive stream, ordered by sortOrder.
   /// UI should watch this stream for instant updates
-  Stream<List<Server>> watchAllServers() {
-    return _isar.isarServers
-        .where()
-        .watch(fireImmediately: true)
-        .map((entities) {
-      final sorted = entities.toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      return sorted.map(_mapToDomain).toList();
-    });
+  Stream<List<Server>> watchAllServers() async* {
+    yield await getAllServers();
+    yield* _box.watch().asyncMap((_) async => await getAllServers());
   }
 
   /// Watch a single server by ID as a reactive stream
   /// Returns null if server doesn't exist
-  Stream<Server?> watchServer(String id) {
-    return _isar.isarServers
-        .filter()
-        .uuidEqualTo(id)
-        .watch(fireImmediately: true)
-        .map((entities) =>
-            entities.isNotEmpty ? _mapToDomain(entities.first) : null);
+  Stream<Server?> watchServer(String id) async* {
+    yield await getServerById(id);
+    yield* _box.watch(key: id).asyncMap((event) async {
+      return await getServerById(id);
+    });
   }
 
   /// Get a single server by ID
   Future<Server?> getServerById(String id) async {
-    final entity = await _isar.isarServers.filter().uuidEqualTo(id).findFirst();
-    return entity != null ? _mapToDomain(entity) : null;
+    final entity = _box.get(id);
+    return entity != null ? await _mapToDomainAsync(entity) : null;
   }
 
   /// Get all servers
   Future<List<Server>> getAllServers() async {
-    final entities = await _isar.isarServers.where().findAll();
-    return entities.map(_mapToDomain).toList();
+    final entities = _box.values.toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return Future.wait(entities.map(_mapToDomainAsync));
   }
 
   /// Add a new server
   Future<void> addServer(Server server) async {
     final entity = _mapToEntity(server);
-    await _isar.writeTxn(() async {
-      await _isar.isarServers.put(entity);
-    });
+    await _box.put(server.id, entity);
+
+    await _secureStorage.saveCredential(server.id, 'password', server.password);
+    if (server.privateKey != null) {
+      debugPrint("Saving private key of length: ${server.privateKey?.length}");
+      await _secureStorage.saveCredential(
+        server.id,
+        'privateKey',
+        server.privateKey!,
+      );
+    }
   }
 
   /// Update an existing server
   Future<void> updateServer(Server server) async {
-    final existing =
-        await _isar.isarServers.filter().uuidEqualTo(server.id).findFirst();
+    final updated = _mapToEntity(server);
+    await _box.put(server.id, updated);
 
-    if (existing != null) {
-      final updated = _mapToEntity(server);
-      updated.id = existing.id; // Preserve internal ID
-      await _isar.writeTxn(() async {
-        await _isar.isarServers.put(updated);
-      });
+    await _secureStorage.saveCredential(server.id, 'password', server.password);
+    if (server.privateKey != null) {
+      debugPrint("Saving private key of length: ${server.privateKey?.length}");
+      await _secureStorage.saveCredential(
+        server.id,
+        'privateKey',
+        server.privateKey!,
+      );
     }
   }
 
   /// Delete a server
   Future<void> deleteServer(String serverId) async {
-    await _isar.writeTxn(() async {
-      await _isar.isarServers.filter().uuidEqualTo(serverId).deleteAll();
-    });
+    await _box.delete(serverId);
+    await _secureStorage.deleteCredentials(serverId);
   }
 
   /// Delete multiple servers at once (bulk delete for ManageServersScreen)
   Future<void> bulkDelete(List<String> uuids) async {
-    await _isar.writeTxn(() async {
-      for (final uuid in uuids) {
-        await _isar.isarServers.filter().uuidEqualTo(uuid).deleteAll();
-      }
-    });
+    await _box.deleteAll(uuids);
+    for (final uuid in uuids) {
+      await _secureStorage.deleteCredentials(uuid);
+    }
   }
 
   /// Reorder servers by persisting the new sortOrder values.
   /// [orderedUuids] is a list of UUIDs in the desired display order.
   Future<void> reorderServers(List<String> orderedUuids) async {
-    await _isar.writeTxn(() async {
-      for (int i = 0; i < orderedUuids.length; i++) {
-        final entity = await _isar.isarServers
-            .filter()
-            .uuidEqualTo(orderedUuids[i])
-            .findFirst();
-        if (entity != null) {
-          entity.sortOrder = i;
-          await _isar.isarServers.put(entity);
-        }
+    for (int i = 0; i < orderedUuids.length; i++) {
+      final key = orderedUuids[i];
+      final entity = _box.get(key);
+      if (entity != null) {
+        entity.sortOrder = i;
+        await _box.put(key, entity);
       }
-    });
+    }
   }
 
   /// Update server snapshot data (called by ViewModel after polling)
   /// This is the key method that enables instant UI updates
   Future<void> updateSnapshot(String serverId, ServerStats stats) async {
-    final existing =
-        await _isar.isarServers.filter().uuidEqualTo(serverId).findFirst();
+    final existing = _box.get(serverId);
 
     if (existing != null) {
-      await _isar.writeTxn(() async {
-        existing.lastCpu = stats.cpuPct;
-        existing.lastRam = stats.ramPct;
-        existing.lastDisk = stats.diskPct;
-        existing.lastDiskUsed = stats.diskUsed;
-        existing.lastDiskTotal = stats.diskTotal;
-        existing.lastSeen = stats.timestamp ?? DateTime.now();
+      existing.lastCpu = stats.cpuPct;
+      existing.lastRam = stats.ramPct;
+      existing.lastDisk = stats.diskPct;
+      existing.lastDiskUsed = stats.diskUsed;
+      existing.lastDiskTotal = stats.diskTotal;
+      existing.lastSeen = stats.timestamp ?? DateTime.now();
 
-        // Update metadata
-        existing.osDistro = stats.osDistro;
-        existing.kernelVersion = stats.kernelVersion;
-        existing.uptime = stats.uptime;
-        // Note: server.hostname is the connection host, hostnameInfo is from the OS
-        existing.hostnameInfo = stats.hostname;
-        existing.ipAddress = stats.ipAddress; // Persist IP Address
-        existing.serverLocation =
-            stats.serverLocation; // Persist Server Location
-        existing.lastLatency = stats.latencyMs;
+      // Update metadata
+      existing.osDistro = stats.osDistro;
+      existing.kernelVersion = stats.kernelVersion;
+      existing.uptime = stats.uptime;
+      // Note: server.hostname is the connection host, hostnameInfo is from the OS
+      existing.hostnameInfo = stats.hostname;
+      existing.ipAddress = stats.ipAddress; // Persist IP Address
+      existing.serverLocation = stats.serverLocation; // Persist Server Location
+      existing.lastLatency = stats.latencyMs;
 
-        existing.status =
-            ServerStatus.online; // Mark as online on successful update
+      existing.status =
+          ServerStatus.online; // Mark as online on successful update
 
-        await _isar.isarServers.put(existing);
-      });
+      await _box.put(serverId, existing);
     }
   }
 
   /// Set server status (called by ViewModel on connection errors)
   Future<void> setStatus(String serverId, ServerStatus status) async {
-    final existing =
-        await _isar.isarServers.filter().uuidEqualTo(serverId).findFirst();
+    final existing = _box.get(serverId);
 
     if (existing != null) {
-      await _isar.writeTxn(() async {
-        existing.status = status;
-        await _isar.isarServers.put(existing);
-      });
+      existing.status = status;
+      await _box.put(serverId, existing);
     }
   }
 
   // --- Mappers ---
 
-  Server _mapToDomain(IsarServer entity) {
+  Future<Server> _mapToDomainAsync(HiveServer entity) async {
+    final password =
+        await _secureStorage.readCredential(entity.uuid, 'password') ?? '';
+    final privateKey = await _secureStorage.readCredential(
+      entity.uuid,
+      'privateKey',
+    );
+
+    debugPrint("Loaded private key of length: ${privateKey?.length}");
+
     return Server(
       id: entity.uuid,
       name: entity.name,
       hostname: entity.hostname,
       port: entity.port,
       username: entity.username,
-      password: entity.password,
+      password: password,
+      privateKey: privateKey,
       authType: entity.authType,
       lastCpu: entity.lastCpu,
       lastRam: entity.lastRam,
@@ -177,30 +181,28 @@ class ServerRepository {
     );
   }
 
-  IsarServer _mapToEntity(Server domain) {
-    final entity = IsarServer()
-      ..uuid = domain.id
-      ..name = domain.name
-      ..hostname = domain.hostname
-      ..port = domain.port
-      ..username = domain.username
-      ..password = domain.password
-      ..authType = domain.authType
-      ..lastCpu = domain.lastCpu
-      ..lastRam = domain.lastRam
-      ..lastDisk = domain.lastDisk
-      ..lastDiskUsed = domain.lastDiskUsed
-      ..lastDiskTotal = domain.lastDiskTotal
-      ..lastSeen = domain.lastSeen
-      ..status = domain.status
-      // Metadata fields
-      ..osDistro = domain.osDistro
-      ..kernelVersion = domain.kernelVersion
-      ..uptime = domain.uptime
-      ..hostnameInfo = domain.hostnameInfo
-      ..ipAddress = domain.ipAddress
-      ..serverLocation = domain.serverLocation
-      ..lastLatency = domain.lastLatency;
-    return entity;
+  HiveServer _mapToEntity(Server domain) {
+    return HiveServer(
+      uuid: domain.id,
+      name: domain.name,
+      hostname: domain.hostname,
+      port: domain.port,
+      username: domain.username,
+      authType: domain.authType,
+      lastCpu: domain.lastCpu,
+      lastRam: domain.lastRam,
+      lastDisk: domain.lastDisk,
+      lastDiskUsed: domain.lastDiskUsed,
+      lastDiskTotal: domain.lastDiskTotal,
+      lastSeen: domain.lastSeen,
+      status: domain.status,
+      osDistro: domain.osDistro,
+      kernelVersion: domain.kernelVersion,
+      uptime: domain.uptime,
+      hostnameInfo: domain.hostnameInfo,
+      ipAddress: domain.ipAddress,
+      serverLocation: domain.serverLocation,
+      lastLatency: domain.lastLatency,
+    );
   }
 }
