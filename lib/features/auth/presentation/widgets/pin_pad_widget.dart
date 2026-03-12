@@ -115,7 +115,10 @@ class PinPadWidget extends StatelessWidget {
             ),
             child: Center(
               child: isBackspace
-                  ? const Icon(LucideIcons.delete, color: AppTheme.textSecondary)
+                  ? const Icon(
+                      LucideIcons.delete,
+                      color: AppTheme.textSecondary,
+                    )
                   : Text(
                       key,
                       style: GoogleFonts.inter(

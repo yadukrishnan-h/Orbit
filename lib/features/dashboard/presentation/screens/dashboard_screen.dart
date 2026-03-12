@@ -21,10 +21,7 @@ import 'package:orbit/features/dashboard/presentation/widgets/base_metric_card.d
 class DashboardScreen extends ConsumerStatefulWidget {
   final String serverId;
 
-  const DashboardScreen({
-    super.key,
-    required this.serverId,
-  });
+  const DashboardScreen({super.key, required this.serverId});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -35,7 +32,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     // 1. Watch loading state for this server for initial overlay
     final loadingState = ref.watch(
-      serverLoadingProvider.select((map) => map[widget.serverId] ?? const ServerLoadingState(isLoading: true)),
+      serverLoadingProvider.select(
+        (map) =>
+            map[widget.serverId] ?? const ServerLoadingState(isLoading: true),
+      ),
     );
     final isLoading = loadingState.isLoading && !loadingState.hasLoadedOnce;
 
@@ -60,22 +60,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           // Loading spinner during background poll
-          Consumer(builder: (context, ref, _) {
-            final monitorState = ref.watch(serverMonitorViewModelProvider);
-            return monitorState.isLoading
-                ? const Padding(
-                    padding: EdgeInsets.only(right: 16),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : const SizedBox.shrink();
-          }),
+          Consumer(
+            builder: (context, ref, _) {
+              final monitorState = ref.watch(serverMonitorViewModelProvider);
+              return monitorState.isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.only(right: 16),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+            },
+          ),
           IconButton(
-            icon:
-                const Icon(LucideIcons.settings, color: AppTheme.textSecondary),
+            icon: const Icon(
+              LucideIcons.settings,
+              color: AppTheme.textSecondary,
+            ),
             onPressed: isLoading ? null : () => _showServerOptionsMenu(context),
           ),
         ],
@@ -161,12 +165,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               Container(
                                 padding: const EdgeInsets.all(AppSizes.p12),
                                 decoration: BoxDecoration(
-                                  color:
-                                      AppTheme.critical.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                                  color: AppTheme.critical.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMedium,
+                                  ),
                                   border: Border.all(
-                                    color: AppTheme.critical
-                                        .withValues(alpha: 0.3),
+                                    color: AppTheme.critical.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -214,7 +222,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       context: context,
       backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.radiusExtraLarge)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusExtraLarge),
+        ),
         side: BorderSide(color: AppTheme.border),
       ),
       builder: (ctx) => SafeArea(
@@ -235,8 +245,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               // ── Edit Server ─────────────────────────────────────────
               ListTile(
-                leading: const Icon(LucideIcons.edit,
-                    color: AppTheme.textPrimary, size: 20),
+                leading: const Icon(
+                  LucideIcons.edit,
+                  color: AppTheme.textPrimary,
+                  size: 20,
+                ),
                 title: Text(
                   'Edit Server',
                   style: GoogleFonts.inter(
@@ -253,8 +266,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               // ── Delete Server ────────────────────────────────────────
               ListTile(
-                leading: const Icon(LucideIcons.trash,
-                    color: AppTheme.critical, size: 20),
+                leading: const Icon(
+                  LucideIcons.trash,
+                  color: AppTheme.critical,
+                  size: 20,
+                ),
                 title: Text(
                   'Delete Server',
                   style: GoogleFonts.inter(
@@ -296,20 +312,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           TextButton(
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            ),
             onPressed: () => Navigator.pop(dialogCtx),
           ),
           TextButton(
             child: Text(
               'Delete',
               style: GoogleFonts.inter(
-                  color: AppTheme.critical, fontWeight: FontWeight.bold),
+                color: AppTheme.critical,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              final repository =
-                  await ref.read(serverRepositoryProvider.future);
+              final repository = await ref.read(
+                serverRepositoryProvider.future,
+              );
               await repository.deleteServer(widget.serverId);
               if (context.mounted) {
                 context.go('/');
@@ -343,30 +364,33 @@ class _ConnectionStateBanner extends StatelessWidget {
   Widget _buildContent() {
     final (Color color, IconData icon, String label) = switch (connState) {
       SshConnectionState.offline => (
-          AppTheme.critical,
-          LucideIcons.wifiOff,
-          'Offline — waiting for network',
-        ),
+        AppTheme.critical,
+        LucideIcons.wifiOff,
+        'Offline — waiting for network',
+      ),
       SshConnectionState.reconnecting => (
-          AppTheme.warning,
-          LucideIcons.refreshCw,
-          'Reconnecting…',
-        ),
+        AppTheme.warning,
+        LucideIcons.refreshCw,
+        'Reconnecting…',
+      ),
       SshConnectionState.connecting => (
-          AppTheme.textSecondary,
-          LucideIcons.loader,
-          'Connecting…',
-        ),
+        AppTheme.textSecondary,
+        LucideIcons.loader,
+        'Connecting…',
+      ),
       SshConnectionState.connected => (
-          AppTheme.success,
-          LucideIcons.checkCircle,
-          'Connected',
-        ),
+        AppTheme.success,
+        LucideIcons.checkCircle,
+        'Connected',
+      ),
     };
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16, vertical: AppSizes.p8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.p16,
+        vertical: AppSizes.p8,
+      ),
       color: color.withValues(alpha: 0.12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -396,7 +420,7 @@ class SystemInfoMetricsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serverAsync = ref.watch(serverStreamProvider(serverId));
-    
+
     return serverAsync.when(
       data: (server) {
         if (server == null) return const SizedBox.shrink();
@@ -407,11 +431,17 @@ class SystemInfoMetricsCard extends ConsumerWidget {
           timestamp: server.lastSeen,
           latencyMs: server.lastLatency,
           uptime: server.uptime.isNotEmpty ? server.uptime : 'Unknown',
-          hostname: server.hostnameInfo.isNotEmpty ? server.hostnameInfo : server.hostname,
+          hostname: server.hostnameInfo.isNotEmpty
+              ? server.hostnameInfo
+              : server.hostname,
           ipAddress: server.ipAddress.isNotEmpty ? server.ipAddress : '',
           osDistro: server.osDistro.isNotEmpty ? server.osDistro : 'Unknown',
-          kernelVersion: server.kernelVersion.isNotEmpty ? server.kernelVersion : 'Unknown',
-          serverLocation: server.serverLocation.isNotEmpty ? server.serverLocation : 'Unknown',
+          kernelVersion: server.kernelVersion.isNotEmpty
+              ? server.kernelVersion
+              : 'Unknown',
+          serverLocation: server.serverLocation.isNotEmpty
+              ? server.serverLocation
+              : 'Unknown',
         );
         return SystemInfoCard(stats: currentStats);
       },
@@ -422,7 +452,10 @@ class SystemInfoMetricsCard extends ConsumerWidget {
           children: [
             const Icon(LucideIcons.alertCircle, color: AppTheme.critical),
             const SizedBox(height: 8),
-            Text(ref.tr('error_loading_server'), style: AppTheme.infoLabelStyle),
+            Text(
+              ref.tr('error_loading_server'),
+              style: AppTheme.infoLabelStyle,
+            ),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () {
@@ -445,7 +478,11 @@ class CpuMetricsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cpuAsync = ref.watch(serverStreamProvider(serverId).select((v) => v.whenData((s) => s?.lastCpu ?? 0.0)));
+    final cpuAsync = ref.watch(
+      serverStreamProvider(
+        serverId,
+      ).select((v) => v.whenData((s) => s?.lastCpu ?? 0.0)),
+    );
     final history = ref.watch(serverHistoryProvider(serverId));
 
     return BaseMetricCard(
@@ -473,7 +510,9 @@ class CpuMetricsCard extends ConsumerWidget {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => const Center(child: Icon(LucideIcons.alertCircle, color: AppTheme.critical)),
+        error: (error, stack) => const Center(
+          child: Icon(LucideIcons.alertCircle, color: AppTheme.critical),
+        ),
       ),
     );
   }
@@ -485,7 +524,11 @@ class MemoryMetricsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ramAsync = ref.watch(serverStreamProvider(serverId).select((v) => v.whenData((s) => s?.lastRam ?? 0.0)));
+    final ramAsync = ref.watch(
+      serverStreamProvider(
+        serverId,
+      ).select((v) => v.whenData((s) => s?.lastRam ?? 0.0)),
+    );
     final history = ref.watch(serverHistoryProvider(serverId));
 
     return Column(
@@ -516,7 +559,9 @@ class MemoryMetricsCard extends ConsumerWidget {
               ],
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => const Center(child: Icon(LucideIcons.alertCircle, color: AppTheme.critical)),
+            error: (error, stack) => const Center(
+              child: Icon(LucideIcons.alertCircle, color: AppTheme.critical),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -551,33 +596,49 @@ class MemoryMetricsCard extends ConsumerWidget {
                       children: [
                         Column(
                           children: [
-                            Icon(LucideIcons.memoryStick,
-                                size: 20,
+                            Icon(
+                              LucideIcons.memoryStick,
+                              size: 20,
+                              color: isHighMemory
+                                  ? AppTheme.critical
+                                  : AppTheme.primary,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              ref.tr('used'),
+                              style: AppTheme.infoLabelStyle,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${ramPct.toStringAsFixed(1)}%',
+                              style: AppTheme.infoValueStyle.copyWith(
                                 color: isHighMemory
                                     ? AppTheme.critical
-                                    : AppTheme.primary),
-                            const SizedBox(height: 8),
-                            Text(ref.tr('used'), style: AppTheme.infoLabelStyle),
-                            const SizedBox(height: 4),
-                            Text('${ramPct.toStringAsFixed(1)}%',
-                                style: AppTheme.infoValueStyle.copyWith(
-                                    color: isHighMemory
-                                        ? AppTheme.critical
-                                        : AppTheme.primary)),
+                                    : AppTheme.primary,
+                              ),
+                            ),
                           ],
                         ),
                         Container(width: 1, height: 40, color: AppTheme.border),
                         Column(
                           children: [
-                            Icon(LucideIcons.checkCircle,
-                                size: 20, color: AppTheme.success),
+                            Icon(
+                              LucideIcons.checkCircle,
+                              size: 20,
+                              color: AppTheme.success,
+                            ),
                             const SizedBox(height: 8),
-                            Text(ref.tr('available'),
-                                style: AppTheme.infoLabelStyle),
+                            Text(
+                              ref.tr('available'),
+                              style: AppTheme.infoLabelStyle,
+                            ),
                             const SizedBox(height: 4),
-                            Text('${(100 - ramPct).toStringAsFixed(1)}%',
-                                style: AppTheme.infoValueStyle
-                                    .copyWith(color: AppTheme.success)),
+                            Text(
+                              '${(100 - ramPct).toStringAsFixed(1)}%',
+                              style: AppTheme.infoValueStyle.copyWith(
+                                color: AppTheme.success,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -601,11 +662,17 @@ class DiskMetricsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final diskAsync = ref.watch(serverStreamProvider(serverId).select((v) => v.whenData((s) => (
-          diskPct: s?.lastDisk ?? 0.0,
-          diskUsed: s?.lastDiskUsed ?? 0,
-          diskTotal: s?.lastDiskTotal ?? 0,
-        ))));
+    final diskAsync = ref.watch(
+      serverStreamProvider(serverId).select(
+        (v) => v.whenData(
+          (s) => (
+            diskPct: s?.lastDisk ?? 0.0,
+            diskUsed: s?.lastDiskUsed ?? 0,
+            diskTotal: s?.lastDiskTotal ?? 0,
+          ),
+        ),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,37 +743,47 @@ class DiskMetricsCard extends ConsumerWidget {
                     children: [
                       Column(
                         children: [
-                          Icon(LucideIcons.folder,
-                              size: 20,
-                              color: isCritical
-                                  ? AppTheme.critical
-                                  : AppTheme.warning),
+                          Icon(
+                            LucideIcons.folder,
+                            size: 20,
+                            color: isCritical
+                                ? AppTheme.critical
+                                : AppTheme.warning,
+                          ),
                           const SizedBox(height: 8),
                           Text(ref.tr('used'), style: AppTheme.infoLabelStyle),
                           const SizedBox(height: 4),
-                          Text(formatBytes(diskUsed),
-                              style: AppTheme.infoValueStyle.copyWith(
-                                  color: isCritical
-                                      ? AppTheme.critical
-                                      : AppTheme.warning)),
+                          Text(
+                            formatBytes(diskUsed),
+                            style: AppTheme.infoValueStyle.copyWith(
+                              color: isCritical
+                                  ? AppTheme.critical
+                                  : AppTheme.warning,
+                            ),
+                          ),
                         ],
                       ),
                       Container(width: 1, height: 40, color: AppTheme.border),
                       Column(
                         children: [
-                          Icon(LucideIcons.checkCircle,
-                              size: 20,
-                              color: isCritical
-                                  ? AppTheme.warning
-                                  : AppTheme.success),
+                          Icon(
+                            LucideIcons.checkCircle,
+                            size: 20,
+                            color: isCritical
+                                ? AppTheme.warning
+                                : AppTheme.success,
+                          ),
                           const SizedBox(height: 8),
                           Text(ref.tr('free'), style: AppTheme.infoLabelStyle),
                           const SizedBox(height: 4),
-                          Text(formatBytes(diskTotal - diskUsed),
-                              style: AppTheme.infoValueStyle.copyWith(
-                                  color: isCritical
-                                      ? AppTheme.warning
-                                      : AppTheme.success)),
+                          Text(
+                            formatBytes(diskTotal - diskUsed),
+                            style: AppTheme.infoValueStyle.copyWith(
+                              color: isCritical
+                                  ? AppTheme.warning
+                                  : AppTheme.success,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -720,7 +797,8 @@ class DiskMetricsCard extends ConsumerWidget {
                         color: AppTheme.critical.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: AppTheme.critical.withValues(alpha: 0.3)),
+                          color: AppTheme.critical.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [

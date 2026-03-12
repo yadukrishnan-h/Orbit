@@ -67,7 +67,10 @@ class HiveServerAdapter extends TypeAdapter<HiveServer> {
       hostname: fields[2] as String,
       port: fields[3] as int,
       username: fields[4] as String,
-      authType: AuthType.values.firstWhere((e) => e.name == fields[5] as String, orElse: () => AuthType.password),
+      authType: AuthType.values.firstWhere(
+        (e) => e.name == fields[5] as String,
+        orElse: () => AuthType.password,
+      ),
       lastCpu: fields[6] as double?,
       lastRam: fields[7] as double?,
       lastDisk: fields[8] as double?,
@@ -81,7 +84,10 @@ class HiveServerAdapter extends TypeAdapter<HiveServer> {
       ipAddress: fields[16] as String?,
       serverLocation: fields[17] as String?,
       lastLatency: fields[18] as int?,
-      status: ServerStatus.values.firstWhere((e) => e.name == fields[19] as String, orElse: () => ServerStatus.unknown),
+      status: ServerStatus.values.firstWhere(
+        (e) => e.name == fields[19] as String,
+        orElse: () => ServerStatus.unknown,
+      ),
       sortOrder: fields[20] as int? ?? 0,
     );
   }

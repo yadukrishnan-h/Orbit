@@ -41,8 +41,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
     final s = widget.existingServer;
     _nameController = TextEditingController(text: s?.name ?? '');
     _hostnameController = TextEditingController(text: s?.hostname ?? '');
-    _portController =
-        TextEditingController(text: s != null ? '${s.port}' : '22');
+    _portController = TextEditingController(
+      text: s != null ? '${s.port}' : '22',
+    );
     _usernameController = TextEditingController(text: s?.username ?? '');
     _passwordController = TextEditingController(
       // In edit mode, pre-fill with the stored password (plain-text from model).
@@ -159,7 +160,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-  
+
                 // General Info Section
                 Text('GENERAL INFORMATION', style: AppTheme.sectionHeaderStyle),
                 const SizedBox(height: 12),
@@ -169,7 +170,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(
-                            color: AppTheme.textPrimary, fontSize: 14),
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                        ),
                         decoration: _buildInputDecoration(
                           labelText: 'Server Name',
                           prefixIcon: LucideIcons.tag,
@@ -191,7 +194,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                             child: TextFormField(
                               controller: _hostnameController,
                               style: const TextStyle(
-                                  color: AppTheme.textPrimary, fontSize: 14),
+                                color: AppTheme.textPrimary,
+                                fontSize: 14,
+                              ),
                               decoration: _buildInputDecoration(
                                 labelText: 'Hostname / IP',
                                 prefixIcon: LucideIcons.globe,
@@ -210,7 +215,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                             child: TextFormField(
                               controller: _portController,
                               style: const TextStyle(
-                                  color: AppTheme.textPrimary, fontSize: 14),
+                                color: AppTheme.textPrimary,
+                                fontSize: 14,
+                              ),
                               keyboardType: TextInputType.number,
                               decoration: _buildInputDecoration(
                                 labelText: 'Port',
@@ -231,7 +238,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-  
+
                 // Authentication Section
                 Text('AUTHENTICATION', style: AppTheme.sectionHeaderStyle),
                 const SizedBox(height: 12),
@@ -241,7 +248,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                       TextFormField(
                         controller: _usernameController,
                         style: const TextStyle(
-                            color: AppTheme.textPrimary, fontSize: 14),
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                        ),
                         decoration: _buildInputDecoration(
                           labelText: 'Username',
                           prefixIcon: LucideIcons.user,
@@ -259,7 +268,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                         initialValue: _authType,
                         dropdownColor: AppTheme.surface,
                         style: GoogleFonts.inter(
-                            color: AppTheme.textPrimary, fontSize: 14),
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                        ),
                         decoration: _buildInputDecoration(
                           labelText: 'Auth Type',
                           prefixIcon: LucideIcons.shieldCheck,
@@ -267,8 +278,10 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                         items: AuthType.values.map((AuthType type) {
                           return DropdownMenuItem<AuthType>(
                             value: type,
-                            child: Text(type.name[0].toUpperCase() +
-                                type.name.substring(1)),
+                            child: Text(
+                              type.name[0].toUpperCase() +
+                                  type.name.substring(1),
+                            ),
                           );
                         }).toList(),
                         onChanged: (AuthType? newValue) {
@@ -287,7 +300,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           ),
                           obscureText: true,
                           style: const TextStyle(
-                              color: AppTheme.textPrimary, fontSize: 14),
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                          ),
                           validator: (value) {
                             if (_authType == AuthType.password &&
                                 (value == null || value.isEmpty)) {
@@ -322,7 +337,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-  
+
                 // Submit Button
                 SizedBox(
                   width: double.infinity,
@@ -341,7 +356,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          _isEditMode ? LucideIcons.save : LucideIcons.plusCircle,
+                          _isEditMode
+                              ? LucideIcons.save
+                              : LucideIcons.plusCircle,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -442,10 +459,13 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(_isEditMode
+            content: Text(
+              _isEditMode
                   ? 'Error saving server: $e'
-                  : 'Error adding server: $e'),
-              backgroundColor: AppTheme.critical),
+                  : 'Error adding server: $e',
+            ),
+            backgroundColor: AppTheme.critical,
+          ),
         );
       }
     }

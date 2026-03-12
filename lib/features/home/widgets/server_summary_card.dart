@@ -42,7 +42,8 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
   void _updateCalculatedValues() {
     _statusColor = _getStatusColor(widget.server.status);
     _statusText = _getStatusText(widget.server.status);
-    _isStale = widget.server.lastSeen != null &&
+    _isStale =
+        widget.server.lastSeen != null &&
         DateTime.now().difference(widget.server.lastSeen!).inMinutes > 5;
     _timeAgoText = widget.server.lastSeen != null
         ? _formatTimeAgo(widget.server.lastSeen!)
@@ -51,7 +52,8 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final loadingState = ref.watch(serverLoadingProvider)[widget.server.id] ??
+    final loadingState =
+        ref.watch(serverLoadingProvider)[widget.server.id] ??
         const ServerLoadingState(isLoading: true);
     final isLoading = loadingState.isLoading && !loadingState.hasLoadedOnce;
 
@@ -60,8 +62,10 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
       child: SystemCard(
         onTap: isLoading
             ? null
-            : () => context.push('/dashboard/${widget.server.id}',
-                extra: widget.server),
+            : () => context.push(
+                '/dashboard/${widget.server.id}',
+                extra: widget.server,
+              ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,8 +131,11 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildFooterStat(LucideIcons.activity, _statusText,
-                    color: _statusColor),
+                _buildFooterStat(
+                  LucideIcons.activity,
+                  _statusText,
+                  color: _statusColor,
+                ),
                 _buildFooterStat(LucideIcons.clock, _timeAgoText),
               ],
             ),
@@ -146,8 +153,11 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.alertCircle,
-                          size: 14, color: AppTheme.critical),
+                      const Icon(
+                        LucideIcons.alertCircle,
+                        size: 14,
+                        color: AppTheme.critical,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -203,12 +213,19 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
           value: 'delete',
           child: Row(
             children: [
-              const Icon(LucideIcons.trash2,
-                  size: 16, color: AppTheme.critical),
+              const Icon(
+                LucideIcons.trash2,
+                size: 16,
+                color: AppTheme.critical,
+              ),
               const SizedBox(width: 12),
-              Text('Delete',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, color: AppTheme.critical)),
+              Text(
+                'Delete',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.critical,
+                ),
+              ),
             ],
           ),
         ),
@@ -217,7 +234,11 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
   }
 
   Widget _buildMetricRow(
-      IconData icon, String label, double percentage, Color color) {
+    IconData icon,
+    String label,
+    double percentage,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, size: 14, color: AppTheme.textSecondary),
@@ -226,8 +247,10 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
           width: 32,
           child: Text(
             label,
-            style:
-                GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+            ),
           ),
         ),
         Expanded(
@@ -280,7 +303,9 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
           title: Text(
             'Delete Server',
             style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
           ),
           content: Text(
             'Are you sure you want to delete ${widget.server.name}?',
@@ -288,14 +313,20 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
           ),
           actions: [
             TextButton(
-              child: Text('Cancel',
-                  style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary),
+              ),
               onPressed: () => Navigator.pop(context, false),
             ),
             TextButton(
-              child: Text('Delete',
-                  style: GoogleFonts.inter(
-                      color: AppTheme.critical, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Delete',
+                style: GoogleFonts.inter(
+                  color: AppTheme.critical,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               onPressed: () => Navigator.pop(context, true),
             ),
           ],

@@ -171,9 +171,7 @@ class MaskingOverlay extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(
-                      color: AppTheme.primary,
-                    ),
+                    const CircularProgressIndicator(color: AppTheme.primary),
                     if (loadingMessage != null) ...[
                       const SizedBox(height: 16),
                       Text(

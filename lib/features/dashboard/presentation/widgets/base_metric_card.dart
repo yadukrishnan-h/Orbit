@@ -7,7 +7,8 @@ class BaseMetricCard extends StatelessWidget {
   final String title;
   final Widget child;
   final double? height;
-  final WidgetRef? ref; // Optional for localization if needed, but standardizing on strings
+  final WidgetRef?
+  ref; // Optional for localization if needed, but standardizing on strings
 
   const BaseMetricCard({
     super.key,
@@ -22,10 +23,7 @@ class BaseMetricCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title.toUpperCase(),
-          style: AppTheme.sectionHeaderStyle,
-        ),
+        Text(title.toUpperCase(), style: AppTheme.sectionHeaderStyle),
         const SizedBox(height: AppSizes.p8),
         SizedBox(
           height: height ?? AppSizes.chartDefaultHeight,

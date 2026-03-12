@@ -74,16 +74,10 @@ class BeszelChart extends StatelessWidget {
             horizontalInterval: horizontalInterval,
             verticalInterval: (history.length / 4).clamp(1, double.infinity),
             getDrawingHorizontalLine: (value) {
-              return const FlLine(
-                color: Colors.white10,
-                strokeWidth: 1,
-              );
+              return const FlLine(color: Colors.white10, strokeWidth: 1);
             },
             getDrawingVerticalLine: (value) {
-              return const FlLine(
-                color: Colors.white10,
-                strokeWidth: 1,
-              );
+              return const FlLine(color: Colors.white10, strokeWidth: 1);
             },
           ),
 
@@ -93,8 +87,10 @@ class BeszelChart extends StatelessWidget {
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => AppTheme.surface,
               tooltipBorder: const BorderSide(color: AppTheme.border),
-              tooltipPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              tooltipPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 6,
+              ),
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((LineBarSpot touchedSpot) {
                   // Find the actual stat from the flattened history
@@ -108,15 +104,9 @@ class BeszelChart extends StatelessWidget {
 
                   return LineTooltipItem(
                     '${valueFormatter?.call(touchedSpot.y) ?? touchedSpot.y.toStringAsFixed(1)}\n',
-                    TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                     children: [
-                      TextSpan(
-                        text: timeStr,
-                        style: _tooltipTimeStyle,
-                      ),
+                      TextSpan(text: timeStr, style: _tooltipTimeStyle),
                     ],
                   );
                 }).toList();
@@ -127,10 +117,12 @@ class BeszelChart extends StatelessWidget {
           // Titles (Axis Labels)
           titlesData: FlTitlesData(
             show: true,
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
 
             // Y-Axis Labels
             leftTitles: AxisTitles(

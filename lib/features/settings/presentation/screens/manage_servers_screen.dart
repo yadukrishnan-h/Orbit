@@ -68,7 +68,9 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
         title: Text(
           'Delete ${_selectedIds.length} Server${_selectedIds.length > 1 ? 's' : ''}?',
           style: GoogleFonts.inter(
-              color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'This action cannot be undone. All data for the selected servers will be permanently removed.',
@@ -77,13 +79,17 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete',
-                style: GoogleFonts.inter(color: AppTheme.critical)),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: AppTheme.critical),
+            ),
           ),
         ],
       ),
@@ -112,7 +118,10 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
   }
 
   Future<void> _onReorder(
-      List<Server> currentServers, int oldIndex, int newIndex) async {
+    List<Server> currentServers,
+    int oldIndex,
+    int newIndex,
+  ) async {
     if (newIndex > oldIndex) newIndex--;
 
     final reordered = List<Server>.from(currentServers);
@@ -148,9 +157,8 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
             IconButton(
               icon: const Icon(LucideIcons.trash2, color: AppTheme.critical),
               tooltip: 'Delete selected',
-              onPressed: () => serverListAsync.whenData(
-                (servers) => _bulkDelete(servers),
-              ),
+              onPressed: () =>
+                  serverListAsync.whenData((servers) => _bulkDelete(servers)),
             ),
           TextButton(
             onPressed: _toggleSelectMode,
@@ -171,13 +179,18 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(LucideIcons.server,
-                      size: 64, color: AppTheme.border),
+                  const Icon(
+                    LucideIcons.server,
+                    size: 64,
+                    color: AppTheme.border,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No Servers',
                     style: GoogleFonts.inter(
-                        color: AppTheme.textSecondary, fontSize: 16),
+                      color: AppTheme.textSecondary,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
@@ -224,8 +237,9 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
                   isSelectMode: _selectMode,
                   isSelected: isSelected,
                   onTap: _selectMode ? () => _toggleSelection(server.id) : null,
-                  onCheckChanged:
-                      _selectMode ? (_) => _toggleSelection(server.id) : null,
+                  onCheckChanged: _selectMode
+                      ? (_) => _toggleSelection(server.id)
+                      : null,
                 ),
               );
             },
@@ -316,8 +330,11 @@ class _ServerRow extends StatelessWidget {
                     color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(LucideIcons.server,
-                      size: 18, color: AppTheme.primary),
+                  child: const Icon(
+                    LucideIcons.server,
+                    size: 18,
+                    color: AppTheme.primary,
+                  ),
                 ),
           title: Text(
             server.name,
@@ -355,8 +372,11 @@ class _ServerRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 ReorderableDragStartListener(
                   index: 0,
-                  child: const Icon(LucideIcons.gripVertical,
-                      color: AppTheme.textSecondary, size: 18),
+                  child: const Icon(
+                    LucideIcons.gripVertical,
+                    color: AppTheme.textSecondary,
+                    size: 18,
+                  ),
                 ),
               ],
             ],

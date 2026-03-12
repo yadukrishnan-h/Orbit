@@ -33,8 +33,9 @@ class GeolocationService {
     }
 
     try {
-      final request =
-          await HttpClient().getUrl(Uri.parse('http://ip-api.com/json/$ip'));
+      final request = await HttpClient().getUrl(
+        Uri.parse('http://ip-api.com/json/$ip'),
+      );
       final response = await request.close();
       if (response.statusCode == 200) {
         final responseBody = await response.transform(utf8.decoder).join();

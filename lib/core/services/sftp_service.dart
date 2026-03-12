@@ -176,8 +176,9 @@ class SftpService {
     bool isLink = false;
     int size = item.attr.size ?? 0;
     // 'modifyTime' is the correct property name in dartssh2 for SftpFileAttrs
-    DateTime modified =
-        DateTime.fromMillisecondsSinceEpoch((item.attr.modifyTime ?? 0) * 1000);
+    DateTime modified = DateTime.fromMillisecondsSinceEpoch(
+      (item.attr.modifyTime ?? 0) * 1000,
+    );
     String permissions = '';
 
     // Parse permissions if available in longname (e.g., "drwxr-xr-x 2 user group ...")
@@ -259,8 +260,10 @@ class SftpService {
   }
 
   /// Download file with progress callback support
-  Future<Uint8List> downloadFile(String path,
-      {void Function(int, int)? onProgress}) async {
+  Future<Uint8List> downloadFile(
+    String path, {
+    void Function(int, int)? onProgress,
+  }) async {
     if (_sftpClient == null) {
       throw Exception('Not connected to server');
     }
@@ -287,8 +290,11 @@ class SftpService {
   }
 
   /// Upload file with progress callback support
-  Future<void> uploadFile(String remotePath, Uint8List data,
-      {void Function(int, int)? onProgress}) async {
+  Future<void> uploadFile(
+    String remotePath,
+    Uint8List data, {
+    void Function(int, int)? onProgress,
+  }) async {
     if (_sftpClient == null) {
       throw Exception('Not connected to server');
     }
@@ -305,10 +311,13 @@ class SftpService {
         } catch (_) {}
       }
 
-      final file = await _sftpClient!.open(remotePath,
-          mode: SftpFileOpenMode.create |
-              SftpFileOpenMode.write |
-              SftpFileOpenMode.truncate);
+      final file = await _sftpClient!.open(
+        remotePath,
+        mode:
+            SftpFileOpenMode.create |
+            SftpFileOpenMode.write |
+            SftpFileOpenMode.truncate,
+      );
 
       // Upload in chunks
       const chunkSize = 32 * 1024; // 32KB chunks
@@ -354,7 +363,8 @@ class SftpService {
     } catch (e) {
       // DartSSH2 throws if directory exists. Let's assume it failed if it wasn't a pre-existing error.
       debugPrint(
-          'SFTP: Warning - Failed to create directory (might exist): $e');
+        'SFTP: Warning - Failed to create directory (might exist): $e',
+      );
       // No rethrow here so that upload parent folder creation doesn't crash if it exists
     }
   }
@@ -388,8 +398,9 @@ class SftpService {
     try {
       // Currently `dartssh2` native `_sftpClient!.rmdir` requires the directory to be empty.
       debugPrint('SFTP: Deleting directory: $path');
-      await _sshClient!
-          .run('rm -rf "$path"'); // Fallback to rm -rf for recursive deletion
+      await _sshClient!.run(
+        'rm -rf "$path"',
+      ); // Fallback to rm -rf for recursive deletion
 
       // Invalidate cache
       invalidateCache(path);
@@ -444,17 +455,20 @@ class SftpService {
       final isLink = attr.isSymbolicLink;
 
       final file = RemoteFile(
-          name: filename,
-          path: path,
-          isDirectory: isDir,
-          size: attr.size ?? 0,
-          modified: DateTime.fromMillisecondsSinceEpoch(
-              (attr.modifyTime ?? 0) * 1000),
-          permissions:
-              attr.mode != null ? _permissionsToString(attr.mode!.value) : '',
-          owner: attr.userID?.toString() ?? '',
-          group: attr.groupID?.toString() ?? '',
-          isLink: isLink);
+        name: filename,
+        path: path,
+        isDirectory: isDir,
+        size: attr.size ?? 0,
+        modified: DateTime.fromMillisecondsSinceEpoch(
+          (attr.modifyTime ?? 0) * 1000,
+        ),
+        permissions: attr.mode != null
+            ? _permissionsToString(attr.mode!.value)
+            : '',
+        owner: attr.userID?.toString() ?? '',
+        group: attr.groupID?.toString() ?? '',
+        isLink: isLink,
+      );
 
       _updateFileMetadataCache(file);
       return file;

@@ -55,7 +55,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
       if (_enteredPin == _newPin) {
         final storage = ref.read(secureStorageServiceProvider);
         await storage.saveMasterPin(_enteredPin);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Master PIN updated successfully')),
@@ -95,10 +95,10 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
         title: Text(
           'Change Master PIN',
           style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-                fontSize: 18,
-              ),
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+            fontSize: 18,
+          ),
         ),
         backgroundColor: AppTheme.background,
         iconTheme: const IconThemeData(color: AppTheme.textPrimary),
@@ -110,9 +110,9 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  _phase == 1 ? Icons.lock_outline : Icons.security, 
-                  size: 64, 
-                  color: AppTheme.primary
+                  _phase == 1 ? Icons.lock_outline : Icons.security,
+                  size: 64,
+                  color: AppTheme.primary,
                 ),
                 const SizedBox(height: 24),
                 Text(

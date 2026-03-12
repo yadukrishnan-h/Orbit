@@ -91,8 +91,9 @@ class RemoteFileItem extends StatelessWidget {
                               Icon(
                                 LucideIcons.eyeOff,
                                 size: 12,
-                                color: AppTheme.textSecondary
-                                    .withValues(alpha: 0.7),
+                                color: AppTheme.textSecondary.withValues(
+                                  alpha: 0.7,
+                                ),
                               ),
                               const SizedBox(width: 4),
                             ],
@@ -131,7 +132,9 @@ class RemoteFileItem extends StatelessWidget {
                                 !file.isDirectory) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 1),
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.zinc800,
                                   borderRadius: BorderRadius.circular(3),
@@ -149,21 +152,24 @@ class RemoteFileItem extends StatelessWidget {
                             // Size
                             Text(
                               file.formattedSize,
-                              style: AppTheme.infoLabelStyle
-                                  .copyWith(fontSize: 11),
+                              style: AppTheme.infoLabelStyle.copyWith(
+                                fontSize: 11,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             // Modified time
                             Text(
                               '•',
-                              style: AppTheme.infoLabelStyle
-                                  .copyWith(fontSize: 11),
+                              style: AppTheme.infoLabelStyle.copyWith(
+                                fontSize: 11,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               file.formattedModified,
-                              style: AppTheme.infoLabelStyle
-                                  .copyWith(fontSize: 11),
+                              style: AppTheme.infoLabelStyle.copyWith(
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -239,9 +245,7 @@ class RemoteFileItem extends StatelessWidget {
                       ),
                     ),
                   // File Icon (large)
-                  Center(
-                    child: _buildFileIcon(size: 48),
-                  ),
+                  Center(child: _buildFileIcon(size: 48)),
                   const SizedBox(height: 12),
                   // File Name
                   Expanded(
@@ -316,11 +320,7 @@ class RemoteFileItem extends StatelessWidget {
       }
     }
 
-    return Icon(
-      icon,
-      size: size,
-      color: iconColor,
-    );
+    return Icon(icon, size: size, color: iconColor);
   }
 }
 

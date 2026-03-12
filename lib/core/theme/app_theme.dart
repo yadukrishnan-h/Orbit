@@ -40,10 +40,8 @@ class AppTheme {
   );
 
   /// Prominent card value (FiraCode)
-  static TextStyle get cardValueStyle => GoogleFonts.firaCode(
-        color: textPrimary,
-        fontWeight: FontWeight.bold,
-      );
+  static TextStyle get cardValueStyle =>
+      GoogleFonts.firaCode(color: textPrimary, fontWeight: FontWeight.bold);
 
   /// Small label inside cards
   static const TextStyle infoLabelStyle = TextStyle(
@@ -53,17 +51,16 @@ class AppTheme {
 
   /// Monospace value inside cards
   static TextStyle get infoValueStyle => GoogleFonts.firaCode(
-        color: textPrimary,
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-      );
+    color: textPrimary,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+  );
 
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF09090B), // Zinc 950 (Void)
-
       // The "Zinc" Color Scheme
       colorScheme: const ColorScheme.dark(
         primary: Color(0xFF10B981), // Emerald 500 (Brand)
@@ -81,9 +78,13 @@ class AppTheme {
         elevation: AppSizes.cardElevation, // FLATTEN EVERYTHING
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radiusMedium), // Tighter corners
+          borderRadius: BorderRadius.circular(
+            AppSizes.radiusMedium,
+          ), // Tighter corners
           side: const BorderSide(
-              color: Color(0xFF27272A), width: 1), // The Beszel Border
+            color: Color(0xFF27272A),
+            width: 1,
+          ), // The Beszel Border
         ),
       ),
 
@@ -95,45 +96,53 @@ class AppTheme {
         centerTitle: false,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.white),
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+          color: Colors.white,
+        ),
       ),
 
       // Text Theme
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: const Color(0xFFFAFAFA),
-      ),
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData.dark().textTheme,
+      ).apply(bodyColor: const Color(0xFFFAFAFA)),
 
       // Bottom Navigation Bar Theme (Material 3 NavigationBar)
       navigationBarTheme: NavigationBarThemeData(
         height: AppSizes.bottomNavBarHeight,
         backgroundColor: const Color(0xFF09090B), // Zinc 950
-        indicatorColor:
-            const Color(0xFF10B981).withValues(alpha: 0.1), // Emerald Pill
+        indicatorColor: const Color(
+          0xFF10B981,
+        ).withValues(alpha: 0.1), // Emerald Pill
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
 
         // Icon Colors
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(
-                color: Color(0xFF10B981)); // Emerald Selected
+              color: Color(0xFF10B981),
+            ); // Emerald Selected
           }
           return const IconThemeData(
-              color: Color(0xFFA1A1AA)); // Zinc 400 Unselected
+            color: Color(0xFFA1A1AA),
+          ); // Zinc 400 Unselected
         }),
 
         // Text Colors
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.inter(
-                color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600);
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            );
           }
           return GoogleFonts.inter(
-              color: const Color(0xFFA1A1AA), // Zinc 400 Unselected
-              fontSize: 12,
-              fontWeight: FontWeight.w500);
+            color: const Color(0xFFA1A1AA), // Zinc 400 Unselected
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          );
         }),
       ),
     );

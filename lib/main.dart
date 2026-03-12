@@ -16,7 +16,7 @@ import 'package:orbit/core/data/entities/hive_server.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  
+
   try {
     await Hive.initFlutter();
     if (!Hive.isAdapterRegistered(0)) {
@@ -26,17 +26,11 @@ void main() async {
   } catch (e) {
     debugPrint('Hive initialization error: $e');
   }
-  
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
-enum AuthState {
-  loading,
-  pinSetup,
-  biometricPrompt,
-  pinUnlock,
-  passed,
-}
+enum AuthState { loading, pinSetup, biometricPrompt, pinUnlock, passed }
 
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
@@ -77,7 +71,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       if (settings.isBiometricsEnabled) {
         if (mounted) setState(() => _authState = AuthState.biometricPrompt);
-        
+
         final biometricService = ref.read(biometricServiceProvider);
         final passed = await biometricService.authenticate(
           reason: 'Authenticate to access Orbit',
@@ -178,9 +172,7 @@ class _SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: AppTheme.background,
-      body: Center(
-        child: CircularProgressIndicator(color: AppTheme.primary),
-      ),
+      body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
     );
   }
 }

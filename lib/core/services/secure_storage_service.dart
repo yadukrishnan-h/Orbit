@@ -5,14 +5,16 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
 
   SecureStorageService()
-      : _storage = const FlutterSecureStorage(
-          iOptions:
-              IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-        );
+    : _storage = const FlutterSecureStorage(
+        iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+      );
 
   /// Saves a credential string associated with a server and key suffix.
   Future<void> saveCredential(
-      String serverId, String keySuffix, String value) async {
+    String serverId,
+    String keySuffix,
+    String value,
+  ) async {
     final key = '${serverId}_$keySuffix';
     await _storage.write(key: key, value: value);
   }
@@ -57,7 +59,9 @@ class SecureStorageService {
       await _storage.delete(key: 'auth_lockout_time');
     } else {
       await _storage.write(
-          key: 'auth_lockout_time', value: time.toIso8601String());
+        key: 'auth_lockout_time',
+        value: time.toIso8601String(),
+      );
     }
   }
 

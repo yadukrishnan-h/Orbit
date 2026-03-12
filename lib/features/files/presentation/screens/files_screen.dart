@@ -116,7 +116,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         Container(
                           constraints: const BoxConstraints(maxWidth: 250),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.background,
                             borderRadius: BorderRadius.circular(6),
@@ -177,8 +179,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               color: AppTheme.textPrimary,
             ),
             onPressed: () => _toggleViewMode(),
-            tooltip:
-                state.viewMode == ViewMode.list ? 'Grid View' : 'List View',
+            tooltip: state.viewMode == ViewMode.list
+                ? 'Grid View'
+                : 'List View',
           ),
         // Refresh button
         if (state.isConnected)
@@ -220,9 +223,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         // Disk usage indicator
         if (state.diskUsage != null) _buildDiskUsageIndicator(state),
         // File list/grid
-        Expanded(
-          child: _buildFileList(state),
-        ),
+        Expanded(child: _buildFileList(state)),
         // Multi-select action bar
         if (state.isMultiSelectMode) _buildMultiSelectBar(state),
       ],
@@ -270,8 +271,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(LucideIcons.folderOpen,
-                          size: 52, color: AppTheme.primary),
+                      child: const Icon(
+                        LucideIcons.folderOpen,
+                        size: 52,
+                        color: AppTheme.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -323,8 +327,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(LucideIcons.folderOpen,
-                          size: 36, color: AppTheme.primary),
+                      child: const Icon(
+                        LucideIcons.folderOpen,
+                        size: 36,
+                        color: AppTheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -377,8 +384,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   Widget _buildBreadcrumbBar(FileBrowserState state) {
-    final segments =
-        state.currentPath.split('/').where((s) => s.isNotEmpty).toList();
+    final segments = state.currentPath
+        .split('/')
+        .where((s) => s.isNotEmpty)
+        .toList();
     final paths = <String>[];
     for (int i = 0; i < segments.length; i++) {
       paths.add('/${segments.sublist(0, i + 1).join('/')}');
@@ -388,9 +397,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.border, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: AppTheme.border, width: 1)),
       ),
       child: Row(
         children: [
@@ -413,8 +420,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           ),
           const SizedBox(width: 8),
           // Breadcrumb separator
-          Icon(LucideIcons.chevronRight,
-              size: 16, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+          Icon(
+            LucideIcons.chevronRight,
+            size: 16,
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
+          ),
           const SizedBox(width: 8),
           // Scrollable path segments
           Expanded(
@@ -428,15 +438,20 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                     onTap: () => _navigateToHome(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         children: [
-                          const Icon(LucideIcons.folder,
-                              size: 14, color: AppTheme.primary),
+                          const Icon(
+                            LucideIcons.folder,
+                            size: 14,
+                            color: AppTheme.primary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Root',
@@ -466,7 +481,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                           onTap: () => _navigateToPath(path),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: isLast
                                   ? AppTheme.primary.withValues(alpha: 0.15)
@@ -477,8 +494,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                               segments[index],
                               style: GoogleFonts.firaCode(
                                 fontSize: 13,
-                                fontWeight:
-                                    isLast ? FontWeight.w600 : FontWeight.w400,
+                                fontWeight: isLast
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
                                 color: isLast
                                     ? AppTheme.textPrimary
                                     : AppTheme.textSecondary,
@@ -542,8 +560,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         color: isCritical
                             ? AppTheme.critical
                             : (isWarning
-                                ? AppTheme.warning
-                                : AppTheme.textSecondary),
+                                  ? AppTheme.warning
+                                  : AppTheme.textSecondary),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -613,8 +631,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.critical.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: AppTheme.critical.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppTheme.critical.withValues(alpha: 0.3),
+                ),
               ),
               child: const Icon(
                 LucideIcons.alertCircle,
@@ -648,9 +667,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               onPressed: () => _refresh(),
               icon: const Icon(LucideIcons.refreshCw, size: 16),
               label: const Text('Retry'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
             ),
           ],
         ),
@@ -662,11 +679,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              LucideIcons.folder,
-              size: 48,
-              color: AppTheme.border,
-            ),
+            const Icon(LucideIcons.folder, size: 48, color: AppTheme.border),
             const SizedBox(height: 16),
             Text(
               'This folder is empty',
@@ -677,10 +690,16 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildCompactActionButton(
-                    LucideIcons.folderPlus, 'New Folder', _createDirectory),
+                  LucideIcons.folderPlus,
+                  'New Folder',
+                  _createDirectory,
+                ),
                 const SizedBox(width: 12),
                 _buildCompactActionButton(
-                    LucideIcons.upload, 'Upload', _uploadFile),
+                  LucideIcons.upload,
+                  'Upload',
+                  _uploadFile,
+                ),
               ],
             ),
           ],
@@ -754,9 +773,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        border: Border(
-          top: BorderSide(color: AppTheme.border, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
@@ -795,13 +812,22 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             // Action buttons
             if (hasSelection) ...[
               _buildActionButton(
-                  LucideIcons.download, 'Download', () => _downloadSelected()),
+                LucideIcons.download,
+                'Download',
+                () => _downloadSelected(),
+              ),
               _buildActionButton(
-                  LucideIcons.trash2, 'Delete', () => _deleteSelected(),
-                  isDestructive: true),
+                LucideIcons.trash2,
+                'Delete',
+                () => _deleteSelected(),
+                isDestructive: true,
+              ),
             ],
             _buildActionButton(
-                LucideIcons.check, 'Select All', () => _selectAll()),
+              LucideIcons.check,
+              'Select All',
+              () => _selectAll(),
+            ),
             // Cancel button
             IconButton(
               icon: const Icon(LucideIcons.x, color: AppTheme.textSecondary),
@@ -815,30 +841,32 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   Widget _buildCompactActionButton(
-      IconData icon, String label, VoidCallback onTap) {
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return TextButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 14),
       label: Text(
         label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
       ),
       style: TextButton.styleFrom(
         foregroundColor: AppTheme.primary,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         backgroundColor: AppTheme.primary.withValues(alpha: 0.05),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, VoidCallback onTap,
-      {bool isDestructive = false}) {
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -857,8 +885,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color:
-                    isDestructive ? AppTheme.critical : AppTheme.textSecondary,
+                color: isDestructive
+                    ? AppTheme.critical
+                    : AppTheme.textSecondary,
               ),
             ),
           ],
@@ -872,14 +901,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final state = ref.read(fileBrowserStateProvider);
 
     debugPrint(
-        'FilesScreen: Tapped file "${file.name}", isDirectory: ${file.isDirectory}');
+      'FilesScreen: Tapped file "${file.name}", isDirectory: ${file.isDirectory}',
+    );
     debugPrint(
-        'FilesScreen: Current state - isMultiSelectMode: ${state.isMultiSelectMode}, isNavigating: ${state.isNavigating}');
+      'FilesScreen: Current state - isMultiSelectMode: ${state.isMultiSelectMode}, isNavigating: ${state.isNavigating}',
+    );
 
     // Don't allow navigation during multi-select or already navigating
     if (state.isMultiSelectMode || state.isNavigating) {
       debugPrint(
-          'FilesScreen: Ignoring tap - multiSelect: ${state.isMultiSelectMode}, navigating: ${state.isNavigating}');
+        'FilesScreen: Ignoring tap - multiSelect: ${state.isMultiSelectMode}, navigating: ${state.isNavigating}',
+      );
       return;
     }
 
@@ -981,7 +1013,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               backgroundColor: AppTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
@@ -993,7 +1026,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               backgroundColor: AppTheme.critical,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
@@ -1023,8 +1057,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             content: const Text('Uploading...'),
             backgroundColor: AppTheme.primary,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
@@ -1039,8 +1074,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             content: const Text('File uploaded successfully'),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
@@ -1051,8 +1087,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             content: Text('Upload failed: $e'),
             backgroundColor: AppTheme.critical,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
@@ -1061,8 +1098,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
   Future<void> _downloadSelected() async {
     final state = ref.read(fileBrowserStateProvider);
-    final files =
-        state.selectedFileObjects.where((f) => !f.isDirectory).toList();
+    final files = state.selectedFileObjects
+        .where((f) => !f.isDirectory)
+        .toList();
 
     if (files.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1100,8 +1138,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Downloaded ${files.length} file(s) to ${directory.path}'),
+            content: Text(
+              'Downloaded ${files.length} file(s) to ${directory.path}',
+            ),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1268,9 +1307,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       leading: Icon(icon, color: iconColor ?? AppTheme.textSecondary),
       title: Text(
         label,
-        style: TextStyle(
-          color: labelColor ?? AppTheme.textPrimary,
-        ),
+        style: TextStyle(color: labelColor ?? AppTheme.textPrimary),
       ),
       onTap: () {
         Navigator.pop(context);
@@ -1291,8 +1328,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         ),
       );
 
-      final bytes =
-          await ref.read(fileBrowserStateProvider.notifier).downloadFile(file);
+      final bytes = await ref
+          .read(fileBrowserStateProvider.notifier)
+          .downloadFile(file);
 
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/${file.name}';
@@ -1333,8 +1371,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         ),
       );
 
-      final bytes =
-          await ref.read(fileBrowserStateProvider.notifier).downloadFile(file);
+      final bytes = await ref
+          .read(fileBrowserStateProvider.notifier)
+          .downloadFile(file);
 
       final directory = await getTemporaryDirectory();
       final filePath = '${directory.path}/${file.name}';
@@ -1481,8 +1520,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   Future<void> _showServerSelectorDialog() async {
-    final servers =
-        await (await ref.read(serverRepositoryProvider.future)).getAllServers();
+    final servers = await (await ref.read(
+      serverRepositoryProvider.future,
+    )).getAllServers();
 
     if (!mounted) return;
 
@@ -1499,8 +1539,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             child: FadeTransition(
               opacity: animation,
               child: ScaleTransition(
-                scale: animation.drive(Tween(begin: 0.9, end: 1.0)
-                    .chain(CurveTween(curve: Curves.easeOutCubic))),
+                scale: animation.drive(
+                  Tween(
+                    begin: 0.9,
+                    end: 1.0,
+                  ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                ),
                 child: AlertDialog(
                   backgroundColor: AppTheme.surface,
                   surfaceTintColor: Colors.transparent,
@@ -1529,7 +1573,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                           final server = servers[index];
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             leading: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -1643,8 +1689,11 @@ class _ServerTile extends StatelessWidget {
                   color: AppTheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(LucideIcons.server,
-                    size: 20, color: AppTheme.primary),
+                child: const Icon(
+                  LucideIcons.server,
+                  size: 20,
+                  color: AppTheme.primary,
+                ),
               ),
               const SizedBox(width: 14),
               // Info
@@ -1703,8 +1752,11 @@ class _ServerTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(LucideIcons.chevronRight,
-                  size: 16, color: AppTheme.textSecondary),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 16,
+                color: AppTheme.textSecondary,
+              ),
             ],
           ),
         ),

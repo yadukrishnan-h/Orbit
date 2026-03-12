@@ -3,17 +3,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'server.freezed.dart';
 part 'server.g.dart';
 
-enum AuthType {
-  password,
-  key,
-}
+enum AuthType { password, key }
 
-enum ServerStatus {
-  unknown,
-  online,
-  offline,
-  error,
-}
+enum ServerStatus { unknown, online, offline, error }
 
 @freezed
 abstract class Server with _$Server {

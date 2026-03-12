@@ -39,10 +39,15 @@ class SettingsScreen extends ConsumerWidget {
             SystemCard(
               padding: EdgeInsets.zero,
               child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: AppSizes.p16, vertical: AppSizes.p4),
-                leading: const Icon(LucideIcons.server,
-                    color: AppTheme.textSecondary, size: AppSizes.iconNormal),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.p16,
+                  vertical: AppSizes.p4,
+                ),
+                leading: const Icon(
+                  LucideIcons.server,
+                  color: AppTheme.textSecondary,
+                  size: AppSizes.iconNormal,
+                ),
                 title: Text(
                   ref.tr('manage_servers'),
                   style: GoogleFonts.inter(
@@ -58,14 +63,17 @@ class SettingsScreen extends ConsumerWidget {
                     fontSize: 12,
                   ),
                 ),
-                trailing: const Icon(LucideIcons.chevronRight,
-                    color: AppTheme.textSecondary, size: 18),
+                trailing: const Icon(
+                  LucideIcons.chevronRight,
+                  color: AppTheme.textSecondary,
+                  size: 18,
+                ),
                 onTap: () => context.push('/manage-servers'),
               ),
             ),
-  
+
             const SizedBox(height: AppSizes.p16),
-  
+
             // ── Group 2: App Preferences ──────────────────────────────
             SystemCard(
               padding: EdgeInsets.zero,
@@ -78,10 +86,15 @@ class SettingsScreen extends ConsumerWidget {
                   const BiometricsTile(),
                   _divider(),
                   ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: AppSizes.p16, vertical: AppSizes.p4),
-                    leading: const Icon(Icons.password_rounded,
-                        color: AppTheme.textSecondary, size: AppSizes.iconNormal),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.p16,
+                      vertical: AppSizes.p4,
+                    ),
+                    leading: const Icon(
+                      Icons.password_rounded,
+                      color: AppTheme.textSecondary,
+                      size: AppSizes.iconNormal,
+                    ),
                     title: Text(
                       'Change Master PIN',
                       style: GoogleFonts.inter(
@@ -97,8 +110,11 @@ class SettingsScreen extends ConsumerWidget {
                         fontSize: 12,
                       ),
                     ),
-                    trailing: const Icon(LucideIcons.chevronRight,
-                        color: AppTheme.textSecondary, size: 18),
+                    trailing: const Icon(
+                      LucideIcons.chevronRight,
+                      color: AppTheme.textSecondary,
+                      size: 18,
+                    ),
                     onTap: () => context.push('/change-pin'),
                   ),
                   _divider(),
@@ -106,9 +122,9 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-  
+
             const SizedBox(height: AppSizes.p32),
-  
+
             // App version footer
             Center(
               child: Text(

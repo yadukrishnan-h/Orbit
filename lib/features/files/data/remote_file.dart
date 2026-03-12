@@ -81,18 +81,43 @@ class RemoteFile {
   }
 
   bool _isImageFile(String ext) {
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff']
-        .contains(ext);
+    return [
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'svg',
+      'webp',
+      'ico',
+      'tiff',
+    ].contains(ext);
   }
 
   bool _isVideoFile(String ext) {
-    return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v']
-        .contains(ext);
+    return [
+      'mp4',
+      'avi',
+      'mkv',
+      'mov',
+      'wmv',
+      'flv',
+      'webm',
+      'm4v',
+    ].contains(ext);
   }
 
   bool _isAudioFile(String ext) {
-    return ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a', 'opus']
-        .contains(ext);
+    return [
+      'mp3',
+      'wav',
+      'flac',
+      'aac',
+      'ogg',
+      'wma',
+      'm4a',
+      'opus',
+    ].contains(ext);
   }
 
   bool _isDocumentFile(String ext) {
@@ -108,7 +133,7 @@ class RemoteFile {
       'ppt',
       'pptx',
       'csv',
-      'md'
+      'md',
     ].contains(ext);
   }
 
@@ -137,13 +162,23 @@ class RemoteFile {
       'yaml',
       'yml',
       'sh',
-      'bash'
+      'bash',
     ].contains(ext);
   }
 
   bool _isArchiveFile(String ext) {
-    return ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'pkg', 'deb', 'rpm']
-        .contains(ext);
+    return [
+      'zip',
+      'rar',
+      '7z',
+      'tar',
+      'gz',
+      'bz2',
+      'xz',
+      'pkg',
+      'deb',
+      'rpm',
+    ].contains(ext);
   }
 
   bool _isConfigFile(String ext) {

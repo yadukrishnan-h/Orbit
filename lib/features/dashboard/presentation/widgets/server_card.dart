@@ -29,8 +29,10 @@ class ServerCard extends StatelessWidget {
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
-        border:
-            Border.all(color: Theme.of(context).colorScheme.outline, width: 1),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline,
+          width: 1,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -50,7 +52,7 @@ class ServerCard extends StatelessWidget {
                       color: _statusColor.withValues(alpha: 0.4),
                       blurRadius: 8,
                       spreadRadius: 2,
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -58,13 +60,16 @@ class ServerCard extends StatelessWidget {
               Text(
                 name,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
               ),
               const Spacer(),
-              const Icon(LucideIcons.server,
-                  size: 16, color: AppTheme.textSecondary),
+              const Icon(
+                LucideIcons.server,
+                size: 16,
+                color: AppTheme.textSecondary,
+              ),
             ],
           ),
 
@@ -72,22 +77,38 @@ class ServerCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Divider(
-                color: Theme.of(context).colorScheme.outline,
-                height: 1,
-                thickness: 1),
+              color: Theme.of(context).colorScheme.outline,
+              height: 1,
+              thickness: 1,
+            ),
           ),
 
           // Metrics Row
           Row(
             children: [
-              _buildMetricColumn(context, 'CPU', currentStats.cpuPct,
-                  AppTheme.cpuColor, (s) => s.cpuPct),
+              _buildMetricColumn(
+                context,
+                'CPU',
+                currentStats.cpuPct,
+                AppTheme.cpuColor,
+                (s) => s.cpuPct,
+              ),
               const SizedBox(width: 12),
-              _buildMetricColumn(context, 'RAM', currentStats.ramPct,
-                  AppTheme.ramColor, (s) => s.ramPct),
+              _buildMetricColumn(
+                context,
+                'RAM',
+                currentStats.ramPct,
+                AppTheme.ramColor,
+                (s) => s.ramPct,
+              ),
               const SizedBox(width: 12),
-              _buildMetricColumn(context, 'Disk', currentStats.diskPct,
-                  Theme.of(context).colorScheme.primary, (s) => s.diskPct),
+              _buildMetricColumn(
+                context,
+                'Disk',
+                currentStats.diskPct,
+                Theme.of(context).colorScheme.primary,
+                (s) => s.diskPct,
+              ),
             ],
           ),
         ],
@@ -95,18 +116,23 @@ class ServerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricColumn(BuildContext context, String label, double value,
-      Color color, double Function(ServerStats) selector) {
+  Widget _buildMetricColumn(
+    BuildContext context,
+    String label,
+    double value,
+    Color color,
+    double Function(ServerStats) selector,
+  ) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textSecondary, fontSize: 11),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+              fontSize: 11,
+            ),
           ),
           const SizedBox(height: 4),
           Text(

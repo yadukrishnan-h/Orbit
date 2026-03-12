@@ -13,10 +13,8 @@ final sftpServiceProvider = Provider<SftpService>((ref) {
 /// Provider for file browser state
 final fileBrowserStateProvider =
     StateNotifierProvider<FileBrowserNotifier, FileBrowserState>((ref) {
-  return FileBrowserNotifier(
-    sftpService: ref.watch(sftpServiceProvider),
-  );
-});
+      return FileBrowserNotifier(sftpService: ref.watch(sftpServiceProvider));
+    });
 
 /// File browser state
 class FileBrowserState {
@@ -88,10 +86,9 @@ class FileBrowserState {
 class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
   final SftpService _sftpService;
 
-  FileBrowserNotifier({
-    required SftpService sftpService,
-  })  : _sftpService = sftpService,
-        super(FileBrowserState());
+  FileBrowserNotifier({required SftpService sftpService})
+    : _sftpService = sftpService,
+      super(FileBrowserState());
 
   /// Connect to server
   Future<void> connectToServer(Server server) async {
@@ -137,13 +134,16 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
   Future<void> loadDirectory(String path, {bool isNavigation = false}) async {
     if (!_sftpService.isConnected) {
       debugPrint('FileBrowser: Not connected to server');
-      state =
-          state.copyWith(error: 'Not connected to server', isNavigating: false);
+      state = state.copyWith(
+        error: 'Not connected to server',
+        isNavigating: false,
+      );
       return;
     }
 
     debugPrint(
-        'FileBrowser: Loading directory: $path (isNavigation: $isNavigation)');
+      'FileBrowser: Loading directory: $path (isNavigation: $isNavigation)',
+    );
 
     state = state.copyWith(
       isLoading: isNavigation,
@@ -192,8 +192,10 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
     if (currentPath == '/') return;
 
     final parentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-    await loadDirectory(parentPath.isEmpty ? '/' : parentPath,
-        isNavigation: true);
+    await loadDirectory(
+      parentPath.isEmpty ? '/' : parentPath,
+      isNavigation: true,
+    );
   }
 
   /// Create new directory
@@ -202,8 +204,9 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
       throw Exception('Not connected to server');
     }
 
-    final path =
-        state.currentPath == '/' ? '/$name' : '${state.currentPath}/$name';
+    final path = state.currentPath == '/'
+        ? '/$name'
+        : '${state.currentPath}/$name';
 
     await _sftpService.createDirectory(path);
     await refresh();
@@ -238,10 +241,7 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
       }
     }
 
-    state = state.copyWith(
-      selectedFiles: {},
-      isMultiSelectMode: false,
-    );
+    state = state.copyWith(selectedFiles: {}, isMultiSelectMode: false);
 
     await refresh();
   }
@@ -257,7 +257,8 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
 
   /// Download multiple files (returns map of filename to bytes)
   Future<Map<String, Uint8List>> downloadMultipleFiles(
-      List<RemoteFile> files) async {
+    List<RemoteFile> files,
+  ) async {
     if (!_sftpService.isConnected) {
       throw Exception('Not connected to server');
     }
@@ -277,8 +278,9 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
       throw Exception('Not connected to server');
     }
 
-    final path =
-        state.currentPath == '/' ? '/$name' : '${state.currentPath}/$name';
+    final path = state.currentPath == '/'
+        ? '/$name'
+        : '${state.currentPath}/$name';
 
     await _sftpService.uploadFile(path, data);
     await refresh();

@@ -40,8 +40,9 @@ class TerminalState {
     bool clearServer = false,
   }) {
     return TerminalState(
-      selectedServer:
-          clearServer ? null : (selectedServer ?? this.selectedServer),
+      selectedServer: clearServer
+          ? null
+          : (selectedServer ?? this.selectedServer),
       status: status ?? this.status,
       outputLines: outputLines ?? this.outputLines,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -94,11 +95,7 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
 
       // Request a PTY-backed interactive shell
       _session = await _client!.shell(
-        pty: const SSHPtyConfig(
-          type: 'xterm-256color',
-          width: 220,
-          height: 50,
-        ),
+        pty: const SSHPtyConfig(type: 'xterm-256color', width: 220, height: 50),
       );
 
       state = state.copyWith(status: TerminalStatus.connected);
@@ -173,9 +170,7 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
     if (_pendingLines.isEmpty) return;
     final lines = List<String>.from(_pendingLines);
     _pendingLines.clear();
-    state = state.copyWith(
-      outputLines: [...state.outputLines, ...lines],
-    );
+    state = state.copyWith(outputLines: [...state.outputLines, ...lines]);
   }
 
   void _onSessionDone() {
@@ -186,10 +181,7 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
     // Flush incomplete buffer line
     if (_lineBuffer.isNotEmpty) {
       state = state.copyWith(
-        outputLines: [
-          ...state.outputLines,
-          _lineBuffer.replaceAll('\r', ''),
-        ],
+        outputLines: [...state.outputLines, _lineBuffer.replaceAll('\r', '')],
       );
       _lineBuffer = '';
     }

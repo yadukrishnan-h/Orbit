@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:orbit/core/services/secure_storage_service.dart';
 
 // A factory function for creating SSHClient instances, allowing for mocking in tests.
-typedef SSHClientFactory = Future<SSHClient> Function(
-  String host,
-  int port,
-  String username,
-  String? password,
-  String? privateKey,
-);
+typedef SSHClientFactory =
+    Future<SSHClient> Function(
+      String host,
+      int port,
+      String username,
+      String? password,
+      String? privateKey,
+    );
 
 Future<SSHClient> _defaultClientFactory(
   String host,
@@ -23,11 +24,13 @@ Future<SSHClient> _defaultClientFactory(
 
   // Normalize the PEM key to fix trailing-space and missing-newline issues
   // that cause `FormatException: PEM header must end with -----`.
-  final normalizedKey =
-      privateKey != null ? SshService.normalizePem(privateKey) : null;
+  final normalizedKey = privateKey != null
+      ? SshService.normalizePem(privateKey)
+      : null;
 
   debugPrint(
-      "SSH: Secure Vault Private Key length: ${normalizedKey?.length ?? 0}");
+    "SSH: Secure Vault Private Key length: ${normalizedKey?.length ?? 0}",
+  );
 
   return SSHClient(
     socket,
@@ -76,22 +79,27 @@ class SshService {
     // Always read credentials directly from the secure vault just before
     // connecting. This guarantees we never use stale/null values from a
     // shallow Server object emitted by the Hive stream.
-    final securePassword =
-        await _secureStorage.readCredential(serverId, 'password');
-    final securePrivateKey =
-        await _secureStorage.readCredential(serverId, 'privateKey');
+    final securePassword = await _secureStorage.readCredential(
+      serverId,
+      'password',
+    );
+    final securePrivateKey = await _secureStorage.readCredential(
+      serverId,
+      'privateKey',
+    );
 
     // Coerce an empty string to null — dartssh2 throws
     // "Passphrase is not required for unencrypted keys" if an empty
     // string (not null) is passed to SSHKeyPair.fromPem for a plain key.
     final String? validPassphrase =
         (securePassword != null && securePassword.trim().isNotEmpty)
-            ? securePassword
-            : null;
+        ? securePassword
+        : null;
 
     debugPrint(
-        'SSH: JIT fetch — password: ${validPassphrase != null ? "present" : "empty/null"}, '
-        'privateKey length: ${securePrivateKey?.length ?? 0}');
+      'SSH: JIT fetch — password: ${validPassphrase != null ? "present" : "empty/null"}, '
+      'privateKey length: ${securePrivateKey?.length ?? 0}',
+    );
 
     try {
       // Robustness: Sometime users enter "IP:Port" in the hostname field.
@@ -106,13 +114,19 @@ class SshService {
       }
 
       debugPrint(
-          'SSH: Attempting connection to ${cleanHost.replaceAll(RegExp(r'\d'), '*')}:$port...');
-      final client = await (clientFactory ?? _defaultClientFactory)(
-              cleanHost, port, username, validPassphrase, securePrivateKey)
-          .timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Connection timed out'),
+        'SSH: Attempting connection to ${cleanHost.replaceAll(RegExp(r'\d'), '*')}:$port...',
       );
+      final client =
+          await (clientFactory ?? _defaultClientFactory)(
+            cleanHost,
+            port,
+            username,
+            validPassphrase,
+            securePrivateKey,
+          ).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Connection timed out'),
+          );
 
       try {
         await client.authenticated;
@@ -169,7 +183,9 @@ class SshService {
         serverId,
         clientFactory: clientFactory,
       );
-      final result = await client.run(command).timeout(
+      final result = await client
+          .run(command)
+          .timeout(
             Duration(seconds: commandTimeoutSeconds),
             onTimeout: () => throw Exception('Command execution timed out'),
           );

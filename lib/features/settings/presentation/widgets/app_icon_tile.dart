@@ -37,8 +37,11 @@ class AppIconTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: const Icon(LucideIcons.layoutGrid,
-          color: AppTheme.textSecondary, size: 20),
+      leading: const Icon(
+        LucideIcons.layoutGrid,
+        color: AppTheme.textSecondary,
+        size: 20,
+      ),
       title: Text(
         'App Icon',
         style: GoogleFonts.inter(
@@ -51,8 +54,11 @@ class AppIconTile extends ConsumerWidget {
         'Default',
         style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
       ),
-      trailing: const Icon(LucideIcons.chevronRight,
-          color: AppTheme.textSecondary, size: 18),
+      trailing: const Icon(
+        LucideIcons.chevronRight,
+        color: AppTheme.textSecondary,
+        size: 18,
+      ),
       onTap: () => _showIconSheet(context),
     );
   }
@@ -96,7 +102,9 @@ class AppIconTile extends ConsumerWidget {
               Text(
                 'More icon options coming soon.',
                 style: GoogleFonts.inter(
-                    color: AppTheme.textSecondary, fontSize: 12),
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 20),
               // GridView — add more AppIconOptions to extend this
@@ -161,16 +169,20 @@ class _IconOptionCard extends StatelessWidget {
           Text(
             option.label,
             style: GoogleFonts.inter(
-              color:
-                  option.isActive ? AppTheme.primary : AppTheme.textSecondary,
+              color: option.isActive
+                  ? AppTheme.primary
+                  : AppTheme.textSecondary,
               fontSize: 12,
               fontWeight: option.isActive ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
           if (option.isActive) ...[
             const SizedBox(height: 4),
-            const Icon(LucideIcons.checkCircle,
-                size: 14, color: AppTheme.primary),
+            const Icon(
+              LucideIcons.checkCircle,
+              size: 14,
+              color: AppTheme.primary,
+            ),
           ],
         ],
       ),

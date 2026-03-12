@@ -47,8 +47,8 @@ class ConnectionState {
 /// Provider that manages the initial connection status
 final connectionStatusProvider =
     StateNotifierProvider<ConnectionStatusNotifier, ConnectionState>((ref) {
-  return ConnectionStatusNotifier(ref);
-});
+      return ConnectionStatusNotifier(ref);
+    });
 
 class ConnectionStatusNotifier extends StateNotifier<ConnectionState> {
   final Ref _ref;

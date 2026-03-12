@@ -50,17 +50,12 @@ final router = GoRouter(
         );
       },
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const HomeScreen(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
         GoRoute(
           path: '/dashboard/:serverId',
           builder: (context, state) {
             final serverId = state.pathParameters['serverId']!;
-            return DashboardScreen(
-              serverId: serverId,
-            );
+            return DashboardScreen(serverId: serverId);
           },
         ),
         GoRoute(

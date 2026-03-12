@@ -84,9 +84,9 @@ class _DebugScreenState extends State<DebugScreen> {
     return Text(
       title,
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: AppTheme.primary,
-            fontWeight: FontWeight.bold,
-          ),
+        color: AppTheme.primary,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -124,8 +124,10 @@ class _DebugScreenState extends State<DebugScreen> {
                 padding: const EdgeInsets.all(8),
                 width: double.infinity,
                 color: Colors.black12,
-                child: Text(_databaseLog,
-                    style: const TextStyle(fontFamily: 'monospace')),
+                child: Text(
+                  _databaseLog,
+                  style: const TextStyle(fontFamily: 'monospace'),
+                ),
               ),
             const SizedBox(height: 16),
             const Divider(),
@@ -153,7 +155,9 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Future<void> _addTestServer() async {
-    setState(() => _databaseLog = 'Direct Hive injection disabled; use UI form.');
+    setState(
+      () => _databaseLog = 'Direct Hive injection disabled; use UI form.',
+    );
   }
 
   Future<void> _readServers() async {
@@ -168,8 +172,10 @@ class _DebugScreenState extends State<DebugScreen> {
       final readBack = await _storage.read(key: key);
 
       if (readBack == value) {
-        setState(() => _secureStorageLog =
-            'Success: Data encrypted and retrieved correctly.');
+        setState(
+          () => _secureStorageLog =
+              'Success: Data encrypted and retrieved correctly.',
+        );
       } else {
         setState(() => _secureStorageLog = 'Failure: Data mismatch.');
       }
@@ -186,16 +192,19 @@ class _DebugScreenState extends State<DebugScreen> {
         child: Column(
           children: [
             TextField(
-                controller: _hostController,
-                decoration: const InputDecoration(labelText: 'Host')),
+              controller: _hostController,
+              decoration: const InputDecoration(labelText: 'Host'),
+            ),
             const SizedBox(height: 8),
             TextField(
-                controller: _portController,
-                decoration: const InputDecoration(labelText: 'Port')),
+              controller: _portController,
+              decoration: const InputDecoration(labelText: 'Port'),
+            ),
             const SizedBox(height: 8),
             TextField(
-                controller: _userController,
-                decoration: const InputDecoration(labelText: 'Username')),
+              controller: _userController,
+              decoration: const InputDecoration(labelText: 'Username'),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _passController,
@@ -225,7 +234,9 @@ class _DebugScreenState extends State<DebugScreen> {
                 child: Text(
                   _sshOutput,
                   style: TextStyle(
-                      color: _sshOutputColor, fontWeight: FontWeight.bold),
+                    color: _sshOutputColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
           ],
@@ -245,7 +256,11 @@ class _DebugScreenState extends State<DebugScreen> {
     const tempId = '_debug_test_server';
     try {
       // Write credentials to the vault under the temp ID.
-      await _secureStorageService.saveCredential(tempId, 'password', _passController.text);
+      await _secureStorageService.saveCredential(
+        tempId,
+        'password',
+        _passController.text,
+      );
 
       final result = await _sshService.connectAndExecute(
         _hostController.text,
@@ -301,7 +316,8 @@ class DebugResponsivenessWidget extends StatelessWidget {
         child: Column(
           children: [
             Text(
-                'Screen Size: ${size.width.toStringAsFixed(1)} x ${size.height.toStringAsFixed(1)}'),
+              'Screen Size: ${size.width.toStringAsFixed(1)} x ${size.height.toStringAsFixed(1)}',
+            ),
             const SizedBox(height: 8),
             Text(
               'Mode: $mode',

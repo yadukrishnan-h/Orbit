@@ -1,5 +1,3 @@
-
-
 /// Centralized dimension constants for the application to ensure absolute
 /// consistency across the UI.
 class AppSizes {

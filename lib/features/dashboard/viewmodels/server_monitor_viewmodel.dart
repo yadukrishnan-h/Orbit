@@ -100,26 +100,25 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     await _initConnectivityMonitoring();
 
     // React to server list changes: handles startup + dynamic add/remove
-    ref.listen<AsyncValue<List<Server>>>(
-      serverListStreamProvider,
-      (previous, next) {
-        next.whenData((newList) async {
-          final newIds = newList.map((s) => s.id).toSet();
-          final currentIds = Set<String>.from(_connectionStates.keys);
+    ref.listen<AsyncValue<List<Server>>>(serverListStreamProvider, (
+      previous,
+      next,
+    ) {
+      next.whenData((newList) async {
+        final newIds = newList.map((s) => s.id).toSet();
+        final currentIds = Set<String>.from(_connectionStates.keys);
 
-          // Start monitoring newly added servers
-          for (final id in newIds.difference(currentIds)) {
-            await startMonitoring(id);
-          }
+        // Start monitoring newly added servers
+        for (final id in newIds.difference(currentIds)) {
+          await startMonitoring(id);
+        }
 
-          // Stop monitoring deleted servers
-          for (final id in currentIds.difference(newIds)) {
-            await stopMonitoring(id);
-          }
-        });
-      },
-      fireImmediately: true,
-    );
+        // Stop monitoring deleted servers
+        for (final id in currentIds.difference(newIds)) {
+          await stopMonitoring(id);
+        }
+      });
+    }, fireImmediately: true);
 
     ref.onDispose(() {
       // [Fix 1] Deregister observer
@@ -257,10 +256,12 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     final initial = await Connectivity().checkConnectivity();
     _isNetworkAvailable = initial.any(_isUsableNetwork);
 
-    _connectivitySub =
-        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+    _connectivitySub = Connectivity().onConnectivityChanged.listen(
+      _onConnectivityChanged,
+    );
     debugPrint(
-        'ServerMonitor: Network monitoring started (${_isNetworkAvailable ? "online" : "offline"})');
+      'ServerMonitor: Network monitoring started (${_isNetworkAvailable ? "online" : "offline"})',
+    );
   }
 
   bool _isUsableNetwork(ConnectivityResult r) =>
@@ -310,7 +311,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
   Future<void> _connectAndStartPolling(String serverId) async {
     if (_isConnecting[serverId] == true) {
       debugPrint(
-          'ServerMonitor: Connect already in progress for $serverId — skipping');
+        'ServerMonitor: Connect already in progress for $serverId — skipping',
+      );
       return;
     }
     _isConnecting[serverId] = true;
@@ -325,8 +327,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     try {
       // [Fix 2] Enforce 10-second timeout on SSH connect
       final client = await _sshService
-          .connect(
-              server.hostname, server.port, server.username, server.id)
+          .connect(server.hostname, server.port, server.username, server.id)
           .timeout(_kSshTimeout);
 
       if (client == null) throw Exception('SSH connection returned null');
@@ -334,7 +335,9 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       // Abandonment check: if the connection was cancelled while in-flight,
       // close the client and return to avoid a zombie polling timer.
       if (_isConnecting[serverId] != true) {
-        debugPrint('ServerMonitor: Connection abandoned for $serverId - closing');
+        debugPrint(
+          'ServerMonitor: Connection abandoned for $serverId - closing',
+        );
         client.close();
         return;
       }
@@ -364,7 +367,9 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       _closeClient(serverId);
       await _repository.setStatus(serverId, ServerStatus.error);
       _loadingNotifier.markError(
-          serverId, 'Host Unreachable: Check IP or Port');
+        serverId,
+        'Host Unreachable: Check IP or Port',
+      );
       _setConnectionState(serverId, SshConnectionState.offline);
     } catch (e) {
       final msg = e.toString();
@@ -374,8 +379,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
 
       // Fallback message mapping if DartSSH2 throws generic exception for auth
       if (msg.toLowerCase().contains('auth')) {
-        _loadingNotifier.markError(serverId,
-            'Authentication Failed: Invalid Username or Password/Key');
+        _loadingNotifier.markError(
+          serverId,
+          'Authentication Failed: Invalid Username or Password/Key',
+        );
       } else {
         _loadingNotifier.markError(serverId, msg);
       }
@@ -396,15 +403,20 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       final stopwatch = Stopwatch()..start();
 
       // [Fix 2] Hard 10s timeout on SSH run
-      final result =
-          await client.run(LinuxParser.linuxMetricsCommand).timeout(_kSshTimeout);
+      final result = await client
+          .run(LinuxParser.linuxMetricsCommand)
+          .timeout(_kSshTimeout);
       stopwatch.stop();
 
       final rawOutput = utf8.decode(result).trim();
       final latencyMs = stopwatch.elapsedMilliseconds;
 
       ServerStats stats = await _parseInIsolate(
-          rawOutput, cpuState.prevIdle, cpuState.prevTotal, latencyMs);
+        rawOutput,
+        cpuState.prevIdle,
+        cpuState.prevTotal,
+        latencyMs,
+      );
 
       // Geolocation (cached per server)
       String serverLoc = '';
@@ -412,14 +424,17 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       if (current != null) serverLoc = current.serverLocation;
       if (serverLoc.isEmpty && stats.ipAddress.isNotEmpty) {
         try {
-          serverLoc =
-              await GeolocationService.getLocationFromIp(stats.ipAddress);
+          serverLoc = await GeolocationService.getLocationFromIp(
+            stats.ipAddress,
+          );
         } catch (_) {}
       }
       stats = stats.copyWith(serverLocation: serverLoc);
 
-      _cpuStates[serverId] =
-          _CpuState(prevIdle: stats.cpuIdle, prevTotal: stats.cpuTotal);
+      _cpuStates[serverId] = _CpuState(
+        prevIdle: stats.cpuIdle,
+        prevTotal: stats.cpuTotal,
+      );
 
       final history = _serverHistories[serverId] ?? [];
       history.add(stats);
@@ -492,7 +507,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       final delay =
           _kReconnectDelays[attempt.clamp(0, _kReconnectDelays.length - 1)];
       debugPrint(
-          'ServerMonitor: Reconnect attempt ${attempt + 1} for $serverId in ${delay}s');
+        'ServerMonitor: Reconnect attempt ${attempt + 1} for $serverId in ${delay}s',
+      );
       await Future.delayed(Duration(seconds: delay));
 
       if (!_connectionStates.containsKey(serverId)) break;
@@ -512,8 +528,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       try {
         // [Fix 2] 10-second hard timeout on reconnect connect
         final client = await _sshService
-            .connect(
-                server.hostname, server.port, server.username, server.id)
+            .connect(server.hostname, server.port, server.username, server.id)
             .timeout(_kSshTimeout);
 
         if (client == null) throw Exception('Connection returned null');
@@ -532,7 +547,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         await _pollServer(serverId);
 
         debugPrint(
-            'ServerMonitor: Reconnected $serverId after ${attempt + 1} attempt(s)');
+          'ServerMonitor: Reconnected $serverId after ${attempt + 1} attempt(s)',
+        );
         break; // Success — exit loop
       } on TimeoutException {
         debugPrint('ServerMonitor: Reconnect timed out for $serverId');
@@ -545,20 +561,26 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         _closeClient(serverId);
         _setConnectionState(serverId, SshConnectionState.reconnecting);
         _loadingNotifier.markError(
-            serverId, 'Host Unreachable: Check IP or Port');
+          serverId,
+          'Host Unreachable: Check IP or Port',
+        );
         attempt++;
       } catch (e) {
         final msg = e.toString();
         debugPrint(
-            'ServerMonitor: Reconnect attempt failed for $serverId: $msg');
+          'ServerMonitor: Reconnect attempt failed for $serverId: $msg',
+        );
         _closeClient(serverId);
 
         // HALT ON AUTH FAILURE
         if (msg.toLowerCase().contains('auth')) {
           debugPrint(
-              'ServerMonitor: FATAL auth error. Aborting reconnect loop.');
-          _loadingNotifier.markError(serverId,
-              'Authentication Failed: Invalid Username or Password/Key');
+            'ServerMonitor: FATAL auth error. Aborting reconnect loop.',
+          );
+          _loadingNotifier.markError(
+            serverId,
+            'Authentication Failed: Invalid Username or Password/Key',
+          );
           _setConnectionState(serverId, SshConnectionState.offline);
           await _repository.setStatus(serverId, ServerStatus.error);
           break; // Exit the while(true) loop immediately
@@ -595,7 +617,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       _sshClients[serverId]?.close();
     } catch (e) {
       debugPrint(
-          'ServerMonitor: Error closing client for $serverId (safe to ignore): $e');
+        'ServerMonitor: Error closing client for $serverId (safe to ignore): $e',
+      );
     } finally {
       _sshClients.remove(serverId);
     }
@@ -625,16 +648,15 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     int prevIdle,
     int prevTotal,
     int latencyMs,
-  ) =>
-      compute(
-        _parseInIsolateHelper,
-        _ParseParams(
-          rawOutput: rawOutput,
-          prevIdle: prevIdle,
-          prevTotal: prevTotal,
-          latencyMs: latencyMs,
-        ),
-      );
+  ) => compute(
+    _parseInIsolateHelper,
+    _ParseParams(
+      rawOutput: rawOutput,
+      prevIdle: prevIdle,
+      prevTotal: prevTotal,
+      latencyMs: latencyMs,
+    ),
+  );
 
   static ServerStats _parseInIsolateHelper(_ParseParams params) {
     try {

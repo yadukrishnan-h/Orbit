@@ -51,7 +51,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<Server> _filterServers(List<Server> servers) {
     return servers.where((server) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           server.name.toLowerCase().contains(_searchQuery) ||
           server.hostname.toLowerCase().contains(_searchQuery);
 
@@ -102,12 +103,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               decoration: InputDecoration(
                 hintText: ref.tr('filter_systems'),
                 hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                prefixIcon: const Icon(LucideIcons.search,
-                    color: AppTheme.textSecondary),
+                prefixIcon: const Icon(
+                  LucideIcons.search,
+                  color: AppTheme.textSecondary,
+                ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(LucideIcons.x,
-                            size: 18, color: AppTheme.textSecondary),
+                        icon: const Icon(
+                          LucideIcons.x,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           _onSearchChanged('');
@@ -128,8 +134,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
                   borderSide: const BorderSide(color: AppTheme.primary),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               style: const TextStyle(color: AppTheme.textPrimary),
             ),
@@ -195,8 +203,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(LucideIcons.server,
-                              size: 64, color: AppTheme.border),
+                          const Icon(
+                            LucideIcons.server,
+                            size: 64,
+                            color: AppTheme.border,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             _searchQuery.isNotEmpty
@@ -235,15 +246,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(LucideIcons.alertCircle,
-                          size: 48, color: AppTheme.critical),
+                      const Icon(
+                        LucideIcons.alertCircle,
+                        size: 48,
+                        color: AppTheme.critical,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Error loading servers',

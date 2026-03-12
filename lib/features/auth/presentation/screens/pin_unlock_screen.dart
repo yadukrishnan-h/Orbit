@@ -113,7 +113,8 @@ class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final remainingLockout = _lockoutEndTime?.difference(DateTime.now()).inSeconds ?? 0;
+    final remainingLockout =
+        _lockoutEndTime?.difference(DateTime.now()).inSeconds ?? 0;
     final isLocked = _isLockedOut;
 
     return Scaffold(
@@ -145,7 +146,9 @@ class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen> {
                       : 'Secure your app and credentials',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: isLocked ? AppTheme.critical : AppTheme.textSecondary,
+                    color: isLocked
+                        ? AppTheme.critical
+                        : AppTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(height: AppSizes.p48),

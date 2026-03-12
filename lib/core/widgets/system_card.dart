@@ -29,11 +29,7 @@ class SystemCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (title != null)
-                  Text(
-                    title!,
-                    style: AppTheme.cardTitleStyle,
-                  ),
+                if (title != null) Text(title!, style: AppTheme.cardTitleStyle),
                 ?trailing,
               ],
             ),
