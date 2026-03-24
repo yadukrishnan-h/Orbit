@@ -26,7 +26,7 @@ class AppIconTile extends ConsumerWidget {
   static const List<AppIconOption> _iconOptions = [
     AppIconOption(
       label: 'Default',
-      assetPath: 'assets/images/orbit-logo.PNG',
+      assetPath: 'assets/images/orbit-logo.png',
       isActive: true,
     ),
     // Add future icon variants here, e.g.:

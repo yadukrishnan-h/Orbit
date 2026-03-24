@@ -10,6 +10,9 @@ import 'package:orbit/features/server_details/presentation/screens/server_detail
 import 'package:orbit/features/settings/presentation/screens/settings_screen.dart';
 import 'package:orbit/features/settings/presentation/screens/manage_servers_screen.dart';
 import 'package:orbit/features/settings/presentation/screens/change_pin_screen.dart';
+import 'package:orbit/features/settings/presentation/screens/about_screen.dart';
+import 'package:orbit/features/settings/presentation/screens/licenses_screen.dart';
+import 'package:orbit/features/settings/presentation/screens/legal_document_screen.dart';
 import 'package:orbit/core/models/server.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -91,6 +94,24 @@ final router = GoRouter(
         GoRoute(
           path: '/manage-servers',
           builder: (context, state) => const ManageServersScreen(),
+        ),
+        GoRoute(
+          path: '/about',
+          builder: (context, state) => const AboutScreen(),
+        ),
+        GoRoute(
+          path: '/licenses',
+          builder: (context, state) => const LicensesScreen(),
+        ),
+        GoRoute(
+          path: '/legal',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>;
+            return LegalDocumentScreen(
+              title: args['title'] as String,
+              assetPath: args['assetPath'] as String,
+            );
+          },
         ),
       ],
     ),

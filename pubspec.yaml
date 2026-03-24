@@ -1,7 +1,7 @@
 name: orbit
 description: "Orbit — SSH & SFTP server management app."
 publish_to: "none"
-version: 1.1.0+4
+version: 1.1.1+5
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
@@ -25,10 +25,15 @@ dependencies:
   intl: ^0.20.2
   file_picker: ^10.3.10
   share_plus: ^12.0.1
-  json_annotation: ^4.9.0
+  json_annotation: ^4.11.0
   local_auth: ^3.0.1
   shared_preferences: ^2.3.2
   connectivity_plus: ^7.0.0
+  in_app_update: ^4.2.5
+  package_info_plus: ^9.0.0
+  url_launcher: ^6.3.2
+  flutter_markdown: ^0.7.7+1
+  xterm: 4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -46,3 +51,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - PRIVACY_POLICY.md
+    - TERMS_OF_SERVICE.md

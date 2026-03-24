@@ -7,7 +7,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/yadukrishnan-h/orbit?style=flat-square&logo=github)](https://github.com/yadukrishnan-h/orbit/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/yadukrishnan-h/orbit?style=flat-square&logo=github)](https://github.com/yadukrishnan-h/orbit/network/members)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter)](https://flutter.dev)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
 
 </div>
 
@@ -22,9 +22,13 @@ At its core, Orbit establishes persistent SSH connections to your servers and co
 Orbit is designed with a clean, dark-first aesthetic and a layered feature-per-screen architecture. Each server you add gets its own persistent background monitoring session; the home screen gives you an at-a-glance fleet overview so you always know the health of every machine before you even open a dashboard.
 
 <p align="center">
-  <img src="assets/screenshots/Dashboard.png" alt="Orbit Dashboard" width="32%" />
-  <img src="assets/screenshots/server-statistics.png" alt="Orbit Server Statistics" width="32%" />
-  <img src="assets/screenshots/terminal-screenshots.jpg" alt="Orbit Terminal" width="32%" />
+  <img src="assets/screenshots/SystemMonitor.png" alt="System Monitor" width="32%" />
+  <img src="assets/screenshots/SystemMonitor_withServerDetails.png" alt="Server Details" width="32%" />
+  <img src="assets/screenshots/Terminal.png" alt="Terminal" width="32%" />
+</p>
+<p align="center">
+  <img src="assets/screenshots/FTP.png" alt="SFTP Browser" width="32%" />
+  <img src="assets/screenshots/Settings.png" alt="Settings" width="32%" />
 </p>
 ---
 

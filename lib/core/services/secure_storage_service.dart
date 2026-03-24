@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -69,6 +70,33 @@ class SecureStorageService {
     final val = await _storage.read(key: 'auth_lockout_time');
     if (val == null || val.isEmpty) return null;
     return DateTime.tryParse(val);
+  }
+
+  // ── Anti-Tamper (Time-travel detection) ────────────────────────────────
+
+  Future<void> saveLastFailedAttempt(DateTime time) async {
+    await _storage.write(
+      key: 'auth_last_failed_attempt',
+      value: time.toIso8601String(),
+    );
+  }
+
+  Future<DateTime?> readLastFailedAttempt() async {
+    final val = await _storage.read(key: 'auth_last_failed_attempt');
+    if (val == null || val.isEmpty) return null;
+    return DateTime.tryParse(val);
+  }
+
+  // ── Hive Encryption Key ───────────────────────────────────────────────
+
+  Future<void> saveHiveKey(List<int> key) async {
+    await _storage.write(key: 'hive_encryption_key', value: base64Encode(key));
+  }
+
+  Future<List<int>?> readHiveKey() async {
+    final val = await _storage.read(key: 'hive_encryption_key');
+    if (val == null || val.isEmpty) return null;
+    return base64Decode(val);
   }
 }
 

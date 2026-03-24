@@ -6,6 +6,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
+import 'package:xterm/xterm.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -14,17 +15,17 @@ import 'package:orbit/core/providers.dart';
 enum TerminalStatus { idle, connecting, connected, disconnecting, error }
 
 class TerminalState {
-  const TerminalState({
+  TerminalState({
     this.selectedServer,
     this.status = TerminalStatus.idle,
-    this.outputLines = const [],
     this.errorMessage,
-  });
+    Terminal? terminal,
+  }) : terminal = terminal ?? Terminal();
 
   final Server? selectedServer;
   final TerminalStatus status;
-  final List<String> outputLines;
   final String? errorMessage;
+  final Terminal terminal;
 
   bool get isConnected => status == TerminalStatus.connected;
   bool get isBusy =>
@@ -34,8 +35,8 @@ class TerminalState {
   TerminalState copyWith({
     Server? selectedServer,
     TerminalStatus? status,
-    List<String>? outputLines,
     String? errorMessage,
+    Terminal? terminal,
     bool clearError = false,
     bool clearServer = false,
   }) {
@@ -44,8 +45,8 @@ class TerminalState {
           ? null
           : (selectedServer ?? this.selectedServer),
       status: status ?? this.status,
-      outputLines: outputLines ?? this.outputLines,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      terminal: terminal ?? this.terminal,
     );
   }
 }
@@ -55,7 +56,7 @@ class TerminalState {
 // ---------------------------------------------------------------------------
 
 class TerminalNotifier extends StateNotifier<TerminalState> {
-  TerminalNotifier(this._ref) : super(const TerminalState());
+  TerminalNotifier(this._ref) : super(TerminalState());
 
   final Ref _ref;
 
@@ -64,12 +65,6 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
   StreamSubscription<Uint8List>? _stdoutSub;
   StreamSubscription<Uint8List>? _stderrSub;
 
-  // Batching: accumulate raw bytes between timer ticks to minimise rebuilds.
-  final List<String> _pendingLines = [];
-  String _lineBuffer = '';
-  Timer? _flushTimer;
-  static const _flushInterval = Duration(milliseconds: 32); // ~30 fps
-
   // -------------------------------------------------------------------------
   // Public API
   // -------------------------------------------------------------------------
@@ -77,10 +72,12 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
   Future<void> connectToServer(Server server) async {
     if (state.isBusy) return;
 
+    // reset terminal for new connection
+    state.terminal.write('\x1b[2J\x1b[H');
+
     state = state.copyWith(
       selectedServer: server,
       status: TerminalStatus.connecting,
-      outputLines: [],
       clearError: true,
     );
 
@@ -95,20 +92,35 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
 
       // Request a PTY-backed interactive shell
       _session = await _client!.shell(
-        pty: const SSHPtyConfig(type: 'xterm-256color', width: 220, height: 50),
+        pty: SSHPtyConfig(
+          type: 'xterm-256color',
+          width: state.terminal.viewWidth,
+          height: state.terminal.viewHeight,
+        ),
       );
 
       state = state.copyWith(status: TerminalStatus.connected);
 
+      // Bridge Terminal -> SSH
+      state.terminal.onOutput = (data) {
+        _session?.stdin.add(utf8.encode(data));
+      };
+
+      // Bridge Terminal -> Resize
+      state.terminal.onResize = (width, height, pixelWidth, pixelHeight) {
+        _session?.resizeTerminal(width, height);
+      };
+
+      // Bridge SSH -> Terminal
       _stdoutSub = _session!.stdout.listen(
-        _onData,
+        (data) => state.terminal.write(utf8.decode(data)),
         onDone: _onSessionDone,
         onError: _onStreamError,
         cancelOnError: false,
       );
 
       _stderrSub = _session!.stderr.listen(
-        _onData,
+        (data) => state.terminal.write(utf8.decode(data)),
         onError: _onStreamError,
         cancelOnError: false,
       );
@@ -133,61 +145,22 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
     _session!.stdin.add(utf8.encode(raw));
   }
 
-  void clearOutput() => state = state.copyWith(outputLines: []);
+  void clearOutput() => state.terminal.write('\x1b[2J\x1b[H');
 
   Future<void> disconnect() async {
     if (state.status == TerminalStatus.idle) return;
     state = state.copyWith(status: TerminalStatus.disconnecting);
     await _cleanup();
-    state = const TerminalState();
+    state = TerminalState(terminal: state.terminal);
   }
 
   // -------------------------------------------------------------------------
   // Private — data processing
   // -------------------------------------------------------------------------
 
-  /// Called for every incoming byte chunk from the server.
-  /// We accumulate into [_lineBuffer], split on newlines, and schedule a
-  /// batched state update via [_flushTimer] to cap rebuilds at ~30 fps.
-  void _onData(Uint8List data) {
-    final raw = utf8.decode(data, allowMalformed: true);
-    _lineBuffer += _stripAnsi(raw);
-
-    final parts = _lineBuffer.split('\n');
-    _lineBuffer = parts.removeLast(); // save incomplete last segment
-
-    for (final part in parts) {
-      final line = part.replaceAll('\r', '');
-      _pendingLines.add(line);
-    }
-
-    // Start / reset the debounce timer.
-    _flushTimer ??= Timer.periodic(_flushInterval, (_) => _flush());
-  }
-
-  /// Pushes accumulated lines into state in one rebuild.
-  void _flush() {
-    if (_pendingLines.isEmpty) return;
-    final lines = List<String>.from(_pendingLines);
-    _pendingLines.clear();
-    state = state.copyWith(outputLines: [...state.outputLines, ...lines]);
-  }
-
   void _onSessionDone() {
-    _flushTimer?.cancel();
-    _flushTimer = null;
-    _flush(); // drain any remaining lines
-
-    // Flush incomplete buffer line
-    if (_lineBuffer.isNotEmpty) {
-      state = state.copyWith(
-        outputLines: [...state.outputLines, _lineBuffer.replaceAll('\r', '')],
-      );
-      _lineBuffer = '';
-    }
-
     _cleanup();
-    state = const TerminalState();
+    state = TerminalState(terminal: state.terminal);
   }
 
   void _onStreamError(Object error) {
@@ -199,10 +172,6 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
   }
 
   Future<void> _cleanup() async {
-    _flushTimer?.cancel();
-    _flushTimer = null;
-    _pendingLines.clear();
-    _lineBuffer = '';
     await _stdoutSub?.cancel();
     await _stderrSub?.cancel();
     _stdoutSub = null;
@@ -211,14 +180,11 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
     _session = null;
     _client?.close();
     _client = null;
+
+    // Important: remove callbacks to prevent memory leaks or unexpected behavior
+    state.terminal.onOutput = null;
+    state.terminal.onResize = null;
   }
-
-  // Compiled once — reused for every strip call.
-  static final _ansiPattern = RegExp(
-    r'(?:\x1B[@-Z\\-_]|\x1B\[[0-?]*[ -/]*[@-~]|\x1B\][^\x07]*(?:\x07|\x1B\\))',
-  );
-
-  String _stripAnsi(String s) => s.replaceAll(_ansiPattern, '');
 
   @override
   void dispose() {
@@ -231,6 +197,7 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
 // Provider
 // ---------------------------------------------------------------------------
 
-final terminalProvider = StateNotifierProvider<TerminalNotifier, TerminalState>(
-  (ref) => TerminalNotifier(ref),
-);
+final terminalProvider =
+    StateNotifierProvider.autoDispose<TerminalNotifier, TerminalState>(
+      (ref) => TerminalNotifier(ref),
+    );

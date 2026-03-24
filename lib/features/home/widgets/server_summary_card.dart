@@ -8,6 +8,7 @@ import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/providers/server_loading_provider.dart';
 import 'package:orbit/core/widgets/system_card.dart';
+import 'package:orbit/features/files/providers/file_browser_provider.dart';
 
 class ServerSummaryCard extends ConsumerStatefulWidget {
   final Server server;
@@ -200,6 +201,16 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
           ),
         ),
         PopupMenuItem(
+          value: 'files',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.folder, size: 16),
+              const SizedBox(width: 12),
+              Text('Files', style: GoogleFonts.inter(fontSize: 13)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
           value: 'edit',
           child: Row(
             children: [
@@ -343,6 +354,41 @@ class _ServerSummaryCardState extends ConsumerState<ServerSummaryCard> {
     } else if (value == 'edit') {
       // Navigate to add-server screen in edit mode
       context.push('/add-server', extra: widget.server);
+    } else if (value == 'files') {
+      _openFilesScreen(widget.server);
+    }
+  }
+
+  Future<void> _openFilesScreen(Server server) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        ),
+      ),
+    );
+
+    try {
+      await ref
+          .read(fileBrowserStateProvider.notifier)
+          .connectAndFetchInitialDirectory(server);
+      if (mounted) {
+        Navigator.of(context).pop(); // dismiss dialog
+        context.push('/files', extra: server);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // dismiss dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to connect to SFTP subsystem: $e'),
+            backgroundColor: AppTheme.critical,
+          ),
+        );
+      }
     }
   }
 

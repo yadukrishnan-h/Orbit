@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart'; // WidgetsBindingObserver
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,6 +62,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _isNetworkAvailable = true;
 
+  /// [Fix 5] Async mutex – serializes server list updates (adds/deletes)
+  /// to prevent race conditions during rapid database changes.
+  Future<void> _updateMutex = Future.value();
+
   /// Tracks whether the app is visible; set via [didChangeAppLifecycleState].
   bool _isAppInForeground = true;
 
@@ -104,7 +107,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       previous,
       next,
     ) {
-      next.whenData((newList) async {
+      _updateMutex = _updateMutex.then((_) async {
+        final newList = next.valueOrNull;
+        if (newList == null) return;
+
         final newIds = newList.map((s) => s.id).toSet();
         final currentIds = Set<String>.from(_connectionStates.keys);
 
@@ -648,15 +654,16 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     int prevIdle,
     int prevTotal,
     int latencyMs,
-  ) => compute(
-    _parseInIsolateHelper,
-    _ParseParams(
-      rawOutput: rawOutput,
-      prevIdle: prevIdle,
-      prevTotal: prevTotal,
-      latencyMs: latencyMs,
-    ),
-  );
+  ) async {
+    return _parseInIsolateHelper(
+      _ParseParams(
+        rawOutput: rawOutput,
+        prevIdle: prevIdle,
+        prevTotal: prevTotal,
+        latencyMs: latencyMs,
+      ),
+    );
+  }
 
   static ServerStats _parseInIsolateHelper(_ParseParams params) {
     try {
