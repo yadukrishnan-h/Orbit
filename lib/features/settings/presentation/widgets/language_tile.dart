@@ -70,6 +70,10 @@ class LanguageTile extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 side: const BorderSide(color: AppTheme.border),
               ),
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.sizeOf(ctx).width * 0.075,
+                vertical: 24.0,
+              ),
               title: Text(
                 ref.tr('select_language'),
                 style: GoogleFonts.inter(
@@ -77,22 +81,25 @@ class LanguageTile extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              content: RadioGroup<String>(
-                groupValue: selected,
-                onChanged: (val) {
-                  if (val != null) setState(() => selected = val);
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: AppSettings.supportedLanguages.map((lang) {
-                    return RadioListTile<String>(
-                      value: lang['code']!,
-                      title: Text(
-                        lang['name']!,
-                        style: GoogleFonts.inter(color: AppTheme.textPrimary),
-                      ),
-                    );
-                  }).toList(),
+              content: SizedBox(
+                width: MediaQuery.sizeOf(ctx).width * 0.85,
+                child: RadioGroup<String>(
+                  groupValue: selected,
+                  onChanged: (val) {
+                    if (val != null) setState(() => selected = val);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: AppSettings.supportedLanguages.map((lang) {
+                      return RadioListTile<String>(
+                        value: lang['code']!,
+                        title: Text(
+                          lang['name']!,
+                          style: GoogleFonts.inter(color: AppTheme.textPrimary),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
               actions: [

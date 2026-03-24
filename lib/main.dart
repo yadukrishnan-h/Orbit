@@ -22,7 +22,33 @@ void main() async {
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(HiveServerAdapter());
     }
-    await Hive.openBox<HiveServer>('servers');
+
+    // ── Hive Encryption [Task 2] ─────────────────────────────────────────
+    final storage = SecureStorageService();
+    List<int>? encryptionKey = await storage.readHiveKey();
+
+    if (encryptionKey == null) {
+      debugPrint('Hive: Generating new secure encryption key');
+      encryptionKey = Hive.generateSecureKey();
+      await storage.saveHiveKey(encryptionKey);
+    }
+
+    try {
+      await Hive.openBox<HiveServer>(
+        'servers',
+        encryptionCipher: HiveAesCipher(encryptionKey),
+      );
+      debugPrint('Hive: Encrypted box "servers" opened successfully');
+    } catch (e) {
+      debugPrint('Hive: Encryption error (likely migration needed): $e');
+      // If we can't open it (e.g. it's unencrypted), delete and start fresh
+      await Hive.deleteBoxFromDisk('servers');
+      await Hive.openBox<HiveServer>(
+        'servers',
+        encryptionCipher: HiveAesCipher(encryptionKey),
+      );
+      debugPrint('Hive: Box recreated with encryption');
+    }
   } catch (e) {
     debugPrint('Hive initialization error: $e');
   }

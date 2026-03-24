@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
@@ -13,6 +14,7 @@ import 'package:orbit/core/providers/server_loading_provider.dart';
 import 'package:orbit/features/dashboard/models/server_stats.dart';
 import 'package:orbit/features/dashboard/models/ssh_connection_state.dart';
 import 'package:orbit/features/dashboard/providers/dashboard_providers.dart';
+import 'package:orbit/features/files/providers/file_browser_provider.dart';
 import 'package:orbit/features/dashboard/widgets/beszel_chart.dart';
 import 'package:orbit/features/dashboard/widgets/system_info_card.dart';
 
@@ -74,6 +76,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     )
                   : const SizedBox.shrink();
             },
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.folder, color: AppTheme.textSecondary),
+            onPressed: isLoading
+                ? null
+                : () {
+                    final serverAsync = ref.read(
+                      serverStreamProvider(widget.serverId),
+                    );
+                    final server = serverAsync.value;
+                    if (server != null) {
+                      _openFilesScreen(server);
+                    }
+                  },
           ),
           IconButton(
             icon: const Icon(
@@ -340,6 +356,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openFilesScreen(Server server) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        ),
+      ),
+    );
+
+    try {
+      await ref
+          .read(fileBrowserStateProvider.notifier)
+          .connectAndFetchInitialDirectory(server);
+      if (mounted) {
+        Navigator.of(context).pop(); // dismiss dialog
+        context.push('/files', extra: server);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // dismiss dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to connect to SFTP subsystem: $e'),
+            backgroundColor: AppTheme.critical,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -674,38 +723,86 @@ class DiskMetricsCard extends ConsumerWidget {
       ),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        diskAsync.when(
-          data: (data) {
-            final diskPct = data.diskPct;
-            final diskUsed = data.diskUsed;
-            final diskTotal = data.diskTotal;
-            final isCritical = diskPct > 85;
+    return diskAsync.when(
+      data: (data) {
+        final diskPct = data.diskPct;
+        final diskUsed = data.diskUsed;
+        final diskTotal = data.diskTotal;
+        final diskAvailable = diskTotal - diskUsed;
+        final isCritical = diskPct > 90;
 
-            return BaseMetricCard(
-              title: ref.tr('disk_usage'),
-              child: Column(
-                children: [
-                  // Header row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return BaseMetricCard(
+          title: ref.tr('disk_usage'),
+          height: 200,
+          child: Row(
+            children: [
+              // Left: Stats
+              Expanded(
+                flex: 4,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDiskStatRow(
+                      label: ref.tr('used'),
+                      value: formatBytes(diskUsed),
+                      color: isCritical ? AppTheme.critical : AppTheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDiskStatRow(
+                      label: ref.tr('available'),
+                      value: formatBytes(diskAvailable),
+                      color: AppTheme.textSecondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.info,
+                          size: 14,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${formatBytes(diskTotal)} Total',
+                          style: AppTheme.infoLabelStyle.copyWith(fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Right: Gauge
+              Expanded(
+                flex: 5,
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            LucideIcons.hardDrive,
-                            size: 20,
-                            color: isCritical
+                      SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: CustomPaint(
+                          painter: DiskGaugePainter(
+                            percentage: diskPct,
+                            activeColor: isCritical
                                 ? AppTheme.critical
                                 : AppTheme.primary,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.1,
+                            ),
                           ),
-                          const SizedBox(width: 12),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 20),
                           Text(
-                            ref.tr('root_partition'),
-                            style: AppTheme.infoValueStyle.copyWith(
-                              fontSize: 15,
+                            '${diskPct.toStringAsFixed(1)}%',
+                            style: AppTheme.cardValueStyle.copyWith(
+                              fontSize: 22,
                               color: isCritical
                                   ? AppTheme.critical
                                   : AppTheme.textPrimary,
@@ -713,144 +810,116 @@ class DiskMetricsCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      Text(
-                        formatPercent(diskPct),
-                        style: AppTheme.cardValueStyle.copyWith(
-                          color: isCritical
-                              ? AppTheme.critical
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Progress bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: (diskPct / 100).clamp(0.0, 1.0),
-                      backgroundColor: AppTheme.background,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isCritical ? AppTheme.critical : AppTheme.primary,
-                      ),
-                      minHeight: 10,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Stats grid
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: [
-                          Icon(
-                            LucideIcons.folder,
-                            size: 20,
-                            color: isCritical
-                                ? AppTheme.critical
-                                : AppTheme.warning,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(ref.tr('used'), style: AppTheme.infoLabelStyle),
-                          const SizedBox(height: 4),
-                          Text(
-                            formatBytes(diskUsed),
-                            style: AppTheme.infoValueStyle.copyWith(
-                              color: isCritical
-                                  ? AppTheme.critical
-                                  : AppTheme.warning,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(width: 1, height: 40, color: AppTheme.border),
-                      Column(
-                        children: [
-                          Icon(
-                            LucideIcons.checkCircle,
-                            size: 20,
-                            color: isCritical
-                                ? AppTheme.warning
-                                : AppTheme.success,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(ref.tr('free'), style: AppTheme.infoLabelStyle),
-                          const SizedBox(height: 4),
-                          Text(
-                            formatBytes(diskTotal - diskUsed),
-                            style: AppTheme.infoValueStyle.copyWith(
-                              color: isCritical
-                                  ? AppTheme.warning
-                                  : AppTheme.success,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  // Critical warning
-                  if (isCritical) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.critical.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppTheme.critical.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            LucideIcons.alertTriangle,
-                            color: AppTheme.critical,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Disk Space Critical',
-                                  style: TextStyle(
-                                    color: AppTheme.critical,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Less than 15% free space remaining',
-                                  style: TextStyle(
-                                    color: AppTheme.critical,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            );
-          },
-          loading: () => const BaseMetricCard(
-            title: '',
-            child: Center(child: CircularProgressIndicator()),
+            ],
           ),
-          error: (error, stack) => const BaseMetricCard(
-            title: '',
-            child: Center(
-              child: Icon(LucideIcons.alertCircle, color: AppTheme.critical),
+        );
+      },
+      loading: () => const BaseMetricCard(
+        title: '',
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => const BaseMetricCard(
+        title: '',
+        child: Center(
+          child: Icon(LucideIcons.alertCircle, color: AppTheme.critical),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiskStatRow({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+            Text(label, style: AppTheme.infoLabelStyle),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Text(
+            value,
+            style: AppTheme.infoValueStyle.copyWith(
+              fontSize: 16,
+              color: AppTheme.textPrimary,
             ),
           ),
         ),
       ],
     );
+  }
+}
+
+class DiskGaugePainter extends CustomPainter {
+  final double percentage;
+  final Color activeColor;
+  final Color backgroundColor;
+
+  DiskGaugePainter({
+    required this.percentage,
+    required this.activeColor,
+    required this.backgroundColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const strokeWidth = 14.0;
+    const startAngle = 3.14159 * 0.75; // 135 degrees
+    const sweepAngle = 3.14159 * 1.5; // 270 degrees
+
+    final bgPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final activePaint = Paint()
+      ..color = activeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    // Draw background arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+      startAngle,
+      sweepAngle,
+      false,
+      bgPaint,
+    );
+
+    // Draw active arc
+    final activeSweep = sweepAngle * (percentage / 100).clamp(0.0, 1.0);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+      startAngle,
+      activeSweep,
+      false,
+      activePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant DiskGaugePainter oldDelegate) {
+    return oldDelegate.percentage != percentage ||
+        oldDelegate.activeColor != activeColor;
   }
 }

@@ -31,6 +31,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _privateKeyController;
 
+  bool _obscurePassword = true;
   AuthType _authType = AuthType.password;
 
   bool get _isEditMode => widget.existingServer != null;
@@ -72,6 +73,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
     required String labelText,
     required IconData prefixIcon,
     String? hintText,
+    Widget? suffixIcon,
   }) {
     return InputDecoration(
       labelText: labelText,
@@ -79,7 +81,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
       labelStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
       hintStyle: const TextStyle(color: AppTheme.disabled, fontSize: 13),
       prefixIcon: Icon(prefixIcon, size: 18, color: AppTheme.textSecondary),
+      suffixIcon: suffixIcon,
       filled: true,
+
       fillColor: AppTheme.background,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -297,8 +301,22 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           decoration: _buildInputDecoration(
                             labelText: 'Password',
                             prefixIcon: LucideIcons.key,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? LucideIcons.eye
+                                    : LucideIcons.eyeOff,
+                                size: 18,
+                                color: AppTheme.textSecondary,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                           ),
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 14,

@@ -12,13 +12,16 @@ final sftpServiceProvider = Provider<SftpService>((ref) {
 
 /// Provider for file browser state
 final fileBrowserStateProvider =
-    StateNotifierProvider<FileBrowserNotifier, FileBrowserState>((ref) {
+    StateNotifierProvider.autoDispose<FileBrowserNotifier, FileBrowserState>((
+      ref,
+    ) {
       return FileBrowserNotifier(sftpService: ref.watch(sftpServiceProvider));
     });
 
 /// File browser state
 class FileBrowserState {
   final bool isConnected;
+  final bool isConnecting;
   final bool isLoading;
   final bool isNavigating;
   final String? navigatingToPath;
@@ -33,6 +36,7 @@ class FileBrowserState {
 
   FileBrowserState({
     this.isConnected = false,
+    this.isConnecting = false,
     this.isLoading = false,
     this.isNavigating = false,
     this.navigatingToPath,
@@ -48,28 +52,34 @@ class FileBrowserState {
 
   FileBrowserState copyWith({
     bool? isConnected,
+    bool? isConnecting,
     bool? isLoading,
     bool? isNavigating,
     String? navigatingToPath,
+    bool clearNavigatingToPath = false,
     bool? isMultiSelectMode,
     Set<String>? selectedFiles,
     List<RemoteFile>? files,
     String? currentPath,
     String? error,
+    bool clearError = false,
     Server? server,
     ViewMode? viewMode,
     Map<String, int>? diskUsage,
   }) {
     return FileBrowserState(
       isConnected: isConnected ?? this.isConnected,
+      isConnecting: isConnecting ?? this.isConnecting,
       isLoading: isLoading ?? this.isLoading,
       isNavigating: isNavigating ?? this.isNavigating,
-      navigatingToPath: navigatingToPath ?? this.navigatingToPath,
+      navigatingToPath: clearNavigatingToPath
+          ? null
+          : (navigatingToPath ?? this.navigatingToPath),
       isMultiSelectMode: isMultiSelectMode ?? this.isMultiSelectMode,
       selectedFiles: selectedFiles ?? this.selectedFiles,
       files: files ?? this.files,
       currentPath: currentPath ?? this.currentPath,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
       server: server ?? this.server,
       viewMode: viewMode ?? this.viewMode,
       diskUsage: diskUsage ?? this.diskUsage,
@@ -92,7 +102,7 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
 
   /// Connect to server
   Future<void> connectToServer(Server server) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isConnecting: true, clearError: true);
 
     try {
       await _sftpService.connect(
@@ -104,8 +114,9 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
 
       state = state.copyWith(
         isConnected: true,
+        isConnecting: false,
         server: server,
-        isLoading: false,
+        clearError: true,
       );
 
       // Load root directory and disk usage
@@ -114,9 +125,52 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
     } catch (e) {
       state = state.copyWith(
         isConnected: false,
-        isLoading: false,
+        isConnecting: false,
         error: e.toString(),
       );
+    }
+  }
+
+  /// Connect to server and fetch initial directory (throws exceptions for UI feedback)
+  Future<void> connectAndFetchInitialDirectory(Server server) async {
+    state = state.copyWith(isConnecting: true, clearError: true);
+
+    try {
+      await _sftpService.connect(
+        host: server.hostname,
+        port: server.port,
+        username: server.username,
+        password: server.password,
+      );
+
+      state = state.copyWith(
+        isConnected: true,
+        isConnecting: false,
+        server: server,
+      );
+
+      // Load root directory manually to throw on failure
+      final files = await _sftpService.listDir('/');
+
+      state = state.copyWith(
+        files: files,
+        currentPath: '/',
+        isLoading: false,
+        isNavigating: false,
+        clearNavigatingToPath: true,
+        selectedFiles: {},
+        isMultiSelectMode: false,
+        clearError: true,
+      );
+
+      await _loadDiskUsage('/');
+    } catch (e) {
+      state = state.copyWith(
+        isConnected: false,
+        isConnecting: false,
+        error: e.toString(),
+      );
+      rethrow;
     }
   }
 
@@ -137,6 +191,7 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
       state = state.copyWith(
         error: 'Not connected to server',
         isNavigating: false,
+        clearNavigatingToPath: true,
       );
       return;
     }
@@ -146,10 +201,11 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
     );
 
     state = state.copyWith(
-      isLoading: isNavigation,
+      isLoading: true,
       isNavigating: isNavigation,
       navigatingToPath: isNavigation ? path : null,
-      error: null,
+      clearNavigatingToPath: !isNavigation,
+      clearError: true,
     );
 
     try {
@@ -162,9 +218,10 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
         currentPath: path,
         isLoading: false,
         isNavigating: false,
-        navigatingToPath: null,
+        clearNavigatingToPath: true,
         selectedFiles: {},
         isMultiSelectMode: false,
+        clearError: true,
       );
 
       // Load disk usage for current path
@@ -174,7 +231,7 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
       state = state.copyWith(
         isLoading: false,
         isNavigating: false,
-        navigatingToPath: null,
+        clearNavigatingToPath: true,
         error: e.toString(),
       );
     }
@@ -347,5 +404,11 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
   /// Refresh current directory
   Future<void> refresh() async {
     await loadDirectory(state.currentPath);
+  }
+
+  @override
+  void dispose() {
+    _sftpService.disconnect();
+    super.dispose();
   }
 }

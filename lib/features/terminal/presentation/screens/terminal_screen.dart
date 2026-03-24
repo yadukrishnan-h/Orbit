@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +11,7 @@ import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/features/terminal/providers/terminal_provider.dart';
+import 'package:xterm/xterm.dart' hide TerminalState;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -25,12 +25,7 @@ class TerminalScreen extends ConsumerStatefulWidget {
 }
 
 class _TerminalScreenState extends ConsumerState<TerminalScreen> {
-  final _inputController = TextEditingController();
-  final _scrollController = ScrollController();
-  final _inputFocusNode = FocusNode();
-
-  final List<String> _history = [];
-  int _historyIndex = -1;
+  final _terminalController = TerminalController();
 
   @override
   void initState() {
@@ -45,51 +40,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
 
   @override
   void dispose() {
-    _inputController.dispose();
-    _scrollController.dispose();
-    _inputFocusNode.dispose();
+    _terminalController.dispose();
     super.dispose();
-  }
-
-  // ─── Scroll ───────────────────────────────────────────────────────────────
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  // ─── Input ────────────────────────────────────────────────────────────────
-
-  void _sendCommand() {
-    final text = _inputController.text;
-    if (text.isEmpty) return;
-    ref.read(terminalProvider.notifier).sendCommand(text);
-    _history.insert(0, text);
-    _historyIndex = -1;
-    _inputController.clear();
-    _inputFocusNode.requestFocus();
-  }
-
-  void _navigateHistory(bool up) {
-    if (_history.isEmpty) return;
-    setState(() {
-      _historyIndex = up
-          ? (_historyIndex + 1).clamp(0, _history.length - 1)
-          : (_historyIndex - 1).clamp(-1, _history.length - 1);
-      _inputController.text = _historyIndex == -1
-          ? ''
-          : _history[_historyIndex];
-      _inputController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _inputController.text.length),
-      );
-    });
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────
@@ -97,10 +49,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(terminalProvider);
-
-    if (state.isConnected && state.outputLines.isNotEmpty) {
-      _scrollToBottom();
-    }
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -567,126 +515,55 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   Widget _buildTerminalView(TerminalState state) {
     return Column(
       children: [
-        // Status bar
         _TerminalStatusBar(server: state.selectedServer),
-
-        // Output — isolated in its own widget to limit rebuild scope
         Expanded(
-          child: RepaintBoundary(
-            child: _TerminalOutput(
-              lines: state.outputLines,
-              scrollController: _scrollController,
+          child: TerminalView(
+            state.terminal,
+            controller: _terminalController,
+            autofocus: true,
+            textStyle: TerminalStyle(
+              fontFamily: GoogleFonts.firaCode().fontFamily!,
+              fontSize: 13,
             ),
+            theme: _getTerminalTheme(),
           ),
         ),
-
-        // Input bar
-        Container(
-          color: AppTheme.surface,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Divider(color: AppTheme.border, height: 1),
-              _buildInputBar(),
-            ],
-          ),
-        ),
+        _QuickKeysBar(terminal: state.terminal),
       ],
     );
   }
 
-  Widget _buildInputBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          // Prompt character
-          Text(
-            '\$',
-            style: GoogleFonts.firaCode(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Text field
-          Expanded(
-            child: KeyboardListener(
-              focusNode: FocusNode(),
-              onKeyEvent: (event) {
-                if (event is KeyDownEvent) {
-                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                    _navigateHistory(true);
-                  } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                    _navigateHistory(false);
-                  } else if (event.logicalKey == LogicalKeyboardKey.keyC &&
-                      HardwareKeyboard.instance.isControlPressed) {
-                    ref.read(terminalProvider.notifier).sendRaw('\x03');
-                  } else if (event.logicalKey == LogicalKeyboardKey.keyD &&
-                      HardwareKeyboard.instance.isControlPressed) {
-                    ref.read(terminalProvider.notifier).sendRaw('\x04');
-                  } else if (event.logicalKey == LogicalKeyboardKey.keyL &&
-                      HardwareKeyboard.instance.isControlPressed) {
-                    ref.read(terminalProvider.notifier).clearOutput();
-                  }
-                }
-              },
-              child: TextField(
-                controller: _inputController,
-                focusNode: _inputFocusNode,
-                autofocus: true,
-                style: GoogleFonts.firaCode(
-                  fontSize: 13,
-                  color: AppTheme.textPrimary,
-                ),
-                cursorColor: AppTheme.primary,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 2),
-                  hintText: 'Enter command…',
-                  hintStyle: TextStyle(color: AppTheme.disabled, fontSize: 13),
-                ),
-                onSubmitted: (_) => _sendCommand(),
-                textInputAction: TextInputAction.send,
-              ),
-            ),
-          ),
-
-          // Send button
-          const SizedBox(width: 8),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: _sendCommand,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: const Icon(
-                  LucideIcons.cornerDownLeft,
-                  size: 16,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+  TerminalTheme _getTerminalTheme() {
+    return TerminalTheme(
+      cursor: AppTheme.primary,
+      selection: AppTheme.primary.withValues(alpha: 0.3),
+      foreground: AppTheme.textPrimary,
+      background: AppTheme.background,
+      black: Colors.black,
+      red: AppTheme.critical,
+      green: AppTheme.success,
+      yellow: AppTheme.warning,
+      blue: Colors.blue,
+      magenta: Colors.pink,
+      cyan: Colors.cyan,
+      white: Colors.white,
+      brightBlack: Colors.grey,
+      brightRed: AppTheme.critical,
+      brightGreen: AppTheme.success,
+      brightYellow: AppTheme.warning,
+      brightBlue: Colors.blueAccent,
+      brightMagenta: Colors.pinkAccent,
+      brightCyan: Colors.cyanAccent,
+      brightWhite: Colors.white,
+      searchHitBackground: AppTheme.warning.withValues(alpha: 0.5),
+      searchHitBackgroundCurrent: AppTheme.warning,
+      searchHitForeground: Colors.black,
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Server tile — extracted to avoid rebuilding the whole list on state changes
+// Server tile
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ServerTile extends ConsumerWidget {
@@ -714,7 +591,6 @@ class _ServerTile extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              // Server icon
               Container(
                 width: 40,
                 height: 40,
@@ -729,7 +605,6 @@ class _ServerTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -753,7 +628,6 @@ class _ServerTile extends ConsumerWidget {
                   ],
                 ),
               ),
-              // Status badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -798,10 +672,6 @@ class _ServerTile extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Status bar — thin themed bar showing current path / connection info
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _TerminalStatusBar extends StatelessWidget {
   const _TerminalStatusBar({required this.server});
 
@@ -814,9 +684,9 @@ class _TerminalStatusBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.surface,
-        border: const Border(bottom: BorderSide(color: AppTheme.border)),
+        border: Border(bottom: BorderSide(color: AppTheme.border)),
       ),
       child: Row(
         children: [
@@ -864,81 +734,78 @@ class _TerminalStatusBar extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Output list — isolated widget so only it rebuilds when lines arrive
-// ─────────────────────────────────────────────────────────────────────────────
+class _QuickKeysBar extends StatelessWidget {
+  const _QuickKeysBar({required this.terminal});
 
-class _TerminalOutput extends StatelessWidget {
-  const _TerminalOutput({required this.lines, required this.scrollController});
-
-  final List<String> lines;
-  final ScrollController scrollController;
+  final Terminal terminal;
 
   @override
   Widget build(BuildContext context) {
-    if (lines.isEmpty) {
-      return Center(
-        child: Text(
-          'Waiting for shell…',
-          style: GoogleFonts.firaCode(fontSize: 13, color: AppTheme.disabled),
-        ),
-      );
-    }
+    final keys = [
+      ('ESC', '\x1b'),
+      ('TAB', '\t'),
+      ('CTRL', 'ctrl'),
+      ('ALT', 'alt'),
+      ('UP', '\x1b[A'),
+      ('DOWN', '\x1b[B'),
+      ('LEFT', '\x1b[D'),
+      ('RIGHT', '\x1b[C'),
+      ('/', '/'),
+      ('-', '-'),
+      ('|', '|'),
+      ('HOME', '\x1b[H'),
+      ('END', '\x1b[F'),
+    ];
 
-    return ListView.builder(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      itemCount: lines.length,
-      // Lines are immutable once appended — skip keep-alives and boundaries
-      // for pure perf gain in a dense text list.
-      addAutomaticKeepAlives: false,
-      addRepaintBoundaries: false,
-      itemBuilder: (_, index) => _TerminalLine(line: lines[index]),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Single terminal output line
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TerminalLine extends StatelessWidget {
-  const _TerminalLine({required this.line});
-
-  final String line;
-
-  static Color _colorForLine(String line) {
-    if (line.isEmpty) return const Color(0xFF71717A); // zinc-500 blank
-    if (line.contains('error') ||
-        line.contains('Error') ||
-        line.contains('FAILED') ||
-        line.contains('fatal') ||
-        line.contains('Fatal')) {
-      return AppTheme.critical;
-    }
-    if (line.contains('warning') ||
-        line.contains('Warning') ||
-        line.contains('WARN')) {
-      return AppTheme.warning;
-    }
-    if (line.startsWith('\$') ||
-        line.startsWith('#') ||
-        line.startsWith('➜') ||
-        line.startsWith('→')) {
-      return AppTheme.primary;
-    }
-    return const Color(0xFFD4D4D4); // VS Code terminal default
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SelectableText(
-      line.isEmpty ? ' ' : line, // keep height on blank lines
-      style: GoogleFonts.firaCode(
-        fontSize: 12.5,
-        height: 1.55,
-        color: _colorForLine(line),
-        letterSpacing: 0.15,
+    return Container(
+      height: 54,
+      decoration: const BoxDecoration(
+        color: AppTheme.surface,
+        border: Border(top: BorderSide(color: AppTheme.border)),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: keys.length,
+        itemBuilder: (context, index) {
+          final key = keys[index];
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SizedBox(
+                height: 36,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppTheme.background,
+                    foregroundColor: AppTheme.textPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: AppTheme.border),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    minimumSize: const Size(44, 36),
+                  ),
+                  onPressed: () {
+                    // For now, CTRL and ALT just send a dummy char or we can implement toggle logic later.
+                    // But standard terminal keys are essential.
+                    if (key.$2 == 'ctrl' || key.$2 == 'alt') {
+                      // Placeholder for modifier logic
+                      return;
+                    }
+                    terminal.onOutput?.call(key.$2);
+                  },
+                  child: Text(
+                    key.$1,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

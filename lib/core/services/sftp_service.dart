@@ -80,7 +80,10 @@ class SftpService {
       );
 
       // Start the native SFTP subsystem
-      _sftpClient = await _sshClient!.sftp();
+      _sftpClient = await _sshClient!.sftp().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('SFTP subsystem connection timed out'),
+      );
 
       _lastHost = host;
       _lastPort = port;
@@ -139,7 +142,12 @@ class SftpService {
     try {
       debugPrint('SFTP: Listing directory: $path');
 
-      final items = await _sftpClient!.listdir(path);
+      final items = await _sftpClient!
+          .listdir(path)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw Exception('Directory listing timed out'),
+          );
       final files = <RemoteFile>[];
 
       for (final item in items) {

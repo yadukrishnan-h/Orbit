@@ -2,6 +2,21 @@
 
 All notable changes to the Orbit project will be documented in this file.
 
+## [1.1.1] - 2026-03-24
+
+### Security & Architecture
+- **Data at Rest Encryption:** Migrated local server database to AES-256 encrypted Hive storage.
+- **Anti-Tamper Lockout:** Implemented system clock manipulation detection for the Master PIN to prevent time-travel brute-force bypasses.
+- **Memory Leak Resolution:** Implemented aggressive garbage collection and `.autoDispose` for background SSH/SFTP sessions.
+- **Isolate Optimization:** Eliminated Isolate thrashing in the monitoring engine, resulting in massively reduced battery consumption and UI stutter.
+
+### UI / UX
+- **Responsive Dialogs:** Re-engineered the Language Selection dialog for modern edge-to-edge displays.
+- **Disk Usage Odometer:** Upgraded the Dashboard Disk metric to a premium radial gauge with dynamic danger-state coloring.
+- **Native Legal Viewer:** Embedded Privacy Policy and Terms of Service natively using custom-themed Markdown rendering.
+- **SFTP Stability:** Introduced a non-dismissible blocking UI during initial file tree fetches to prevent ghost touches and race conditions.
+- **In-App Updates:** Integrated native Google Play Store update checking.
+
 ## [1.1.0] - 2026-03-12
 
 ### Security

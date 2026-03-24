@@ -2,7 +2,7 @@
 
 **Last updated: March 2026**
 
-Yadu Krishnan H ("Developer") built the Orbit app as an Open Source application. This SERVICE is provided at no cost and is intended for use as is.
+Yadu Krishnan H ("Developer") built the Orbit app as a Source-Available application. This SERVICE is provided at no cost and is intended for use as is.
 
 ### 1. Information Collection and Use
 

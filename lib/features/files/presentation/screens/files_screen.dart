@@ -39,6 +39,13 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         setState(() {
           _showServerSelector = false;
         });
+
+        final state = ref.read(fileBrowserStateProvider);
+        if (state.isConnected && state.server?.id == args.id) {
+          // Already connected (likely via blocking UX), skip reconnecting
+          return;
+        }
+
         _connectToServer(args);
       }
     });
@@ -58,9 +65,56 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       body: Stack(
         children: [
           _buildBody(state),
+          // Connection loading overlay
+          if (state.isConnecting) _buildConnectionOverlay(state),
           // Navigation loading overlay
           if (state.isNavigating) _buildNavigationOverlay(state),
         ],
+      ),
+    );
+  }
+
+  Widget _buildConnectionOverlay(FileBrowserState state) {
+    return Positioned.fill(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+        child: Container(
+          color: AppTheme.background.withValues(alpha: 0.8),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Connecting to Server...',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                if (state.server != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    state.server!.name,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -933,11 +987,15 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   void _navigateToHome() {
-    ref.read(fileBrowserStateProvider.notifier).loadDirectory('/');
+    ref
+        .read(fileBrowserStateProvider.notifier)
+        .loadDirectory('/', isNavigation: true);
   }
 
   void _navigateToPath(String path) {
-    ref.read(fileBrowserStateProvider.notifier).loadDirectory(path);
+    ref
+        .read(fileBrowserStateProvider.notifier)
+        .loadDirectory(path, isNavigation: true);
   }
 
   Future<void> _refresh() async {
