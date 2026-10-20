@@ -3,7 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 
 class LegalDocumentScreen extends StatelessWidget {
@@ -68,9 +68,11 @@ class LegalDocumentScreen extends StatelessWidget {
 
           return Markdown(
             data: data,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 16.0,
+            padding: EdgeInsets.fromLTRB(
+              20.0,
+              16.0,
+              20.0,
+              MediaQuery.of(context).padding.bottom + 16,
             ),
             styleSheet: MarkdownStyleSheet(
               p: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -93,26 +95,35 @@ class LegalDocumentScreen extends StatelessWidget {
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]),
               code: GoogleFonts.firaCode(
-                backgroundColor: AppTheme.surface,
-                color: Colors.grey[300],
+                backgroundColor: AppTheme.cardBackground,
+                color: AppTheme.terminalMint,
                 fontSize: 13,
               ),
               codeblockDecoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: AppTheme.cardBackground,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
               ),
               blockquoteDecoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: AppTheme.cardBackground,
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(8),
+                ),
                 border: const Border(
-                  left: BorderSide(color: AppTheme.primary, width: 4),
+                  left: BorderSide(color: AppTheme.terminalMint, width: 3),
                 ),
               ),
               blockquote: GoogleFonts.inter(
                 color: AppTheme.textSecondary,
                 fontStyle: FontStyle.italic,
               ),
-              a: GoogleFonts.inter(color: AppTheme.primary),
+              a: GoogleFonts.inter(
+                color: AppTheme.terminalMint,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           );
         },

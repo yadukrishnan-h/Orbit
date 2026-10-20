@@ -1,21 +1,30 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orbit/core/models/server.dart';
+import 'package:orbit/core/providers.dart';
+import 'package:orbit/core/services/host_key_service.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/core/services/sftp_service.dart';
 import 'package:orbit/features/files/data/remote_file.dart';
 import 'package:orbit/features/files/presentation/widgets/remote_file_item.dart';
 
 /// Provider for SFTP service instance
 final sftpServiceProvider = Provider<SftpService>((ref) {
-  return SftpService();
+  final hostKeyService = ref.watch(hostKeyServiceProvider);
+  final secureStorage = ref.watch(secureStorageServiceProvider);
+  return SftpService(hostKeyService, secureStorage);
 });
 
 /// Provider for file browser state
 final fileBrowserStateProvider =
-    StateNotifierProvider.autoDispose<FileBrowserNotifier, FileBrowserState>((
-      ref,
-    ) {
-      return FileBrowserNotifier(sftpService: ref.watch(sftpServiceProvider));
+    StateNotifierProvider<FileBrowserNotifier, FileBrowserState>((ref) {
+      return FileBrowserNotifier(
+        sftpService: ref.watch(sftpServiceProvider),
+        ref: ref,
+      );
     });
 
 /// File browser state
@@ -95,10 +104,26 @@ class FileBrowserState {
 /// File browser notifier with enhanced features
 class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
   final SftpService _sftpService;
+  final Ref? _ref;
 
-  FileBrowserNotifier({required SftpService sftpService})
+  FileBrowserNotifier({required SftpService sftpService, Ref? ref})
     : _sftpService = sftpService,
-      super(FileBrowserState());
+      _ref = ref,
+      super(FileBrowserState()) {
+    // Clean up active SFTP session if the current server is deleted [LOGIC-008]
+    _ref?.listen<AsyncValue<List<Server>>>(serverListStreamProvider, (
+      prev,
+      next,
+    ) {
+      final serverId = state.server?.id;
+      if (serverId != null) {
+        final servers = next.asData?.value;
+        if (servers != null && !servers.any((s) => s.id == serverId)) {
+          disconnect();
+        }
+      }
+    });
+  }
 
   /// Connect to server
   Future<void> connectToServer(Server server) async {
@@ -110,6 +135,8 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
         port: server.port,
         username: server.username,
         password: server.password,
+        serverId: server.id,
+        privateKey: server.privateKey,
       );
 
       state = state.copyWith(
@@ -141,6 +168,8 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
         port: server.port,
         username: server.username,
         password: server.password,
+        serverId: server.id,
+        privateKey: server.privateKey,
       );
 
       state = state.copyWith(
@@ -303,27 +332,38 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
     await refresh();
   }
 
-  /// Download file
-  Future<Uint8List> downloadFile(RemoteFile file) async {
+  /// Download file to disk
+  Future<File> downloadFile(RemoteFile file, {String? destinationPath}) async {
     if (!_sftpService.isConnected) {
       throw Exception('Not connected to server');
     }
 
-    return await _sftpService.downloadFile(file.path);
+    return await _sftpService.downloadFile(
+      file.path,
+      destinationPath: destinationPath,
+    );
   }
 
-  /// Download multiple files (returns map of filename to bytes)
-  Future<Map<String, Uint8List>> downloadMultipleFiles(
-    List<RemoteFile> files,
-  ) async {
+  /// Download multiple files to disk
+  Future<List<File>> downloadMultipleFiles(
+    List<RemoteFile> files, {
+    String? targetDirectory,
+  }) async {
     if (!_sftpService.isConnected) {
       throw Exception('Not connected to server');
     }
 
-    final results = <String, Uint8List>{};
+    final results = <File>[];
     for (final file in files) {
       if (!file.isDirectory) {
-        results[file.name] = await _sftpService.downloadFile(file.path);
+        final dest = targetDirectory != null
+            ? '$targetDirectory/${file.name}'
+            : null;
+        final downloaded = await _sftpService.downloadFile(
+          file.path,
+          destinationPath: dest,
+        );
+        results.add(downloaded);
       }
     }
     return results;
@@ -340,6 +380,30 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
         : '${state.currentPath}/$name';
 
     await _sftpService.uploadFile(path, data);
+    await refresh();
+  }
+
+  /// Upload file using a stream to avoid OOM crashes on large files [UI-004]
+  Future<void> uploadFileStream(
+    String name,
+    Stream<List<int>> stream,
+    int totalBytes, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (!_sftpService.isConnected) {
+      throw Exception('Not connected to server');
+    }
+
+    final path = state.currentPath == '/'
+        ? '/$name'
+        : '${state.currentPath}/$name';
+
+    await _sftpService.uploadFileStream(
+      path,
+      stream,
+      totalBytes,
+      onProgress: onProgress,
+    );
     await refresh();
   }
 
@@ -398,7 +462,9 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
   /// Disconnect from server
   Future<void> disconnect() async {
     await _sftpService.disconnect();
-    state = FileBrowserState();
+    if (mounted) {
+      state = FileBrowserState();
+    }
   }
 
   /// Refresh current directory
@@ -408,7 +474,7 @@ class FileBrowserNotifier extends StateNotifier<FileBrowserState> {
 
   @override
   void dispose() {
-    _sftpService.disconnect();
+    unawaited(_sftpService.disconnect().catchError((_) {}));
     super.dispose();
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart'; // WidgetsBindingObserver
 import 'package:dartssh2/dartssh2.dart';
@@ -15,6 +16,8 @@ import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/core/providers/server_loading_provider.dart';
 import 'package:orbit/core/services/geolocation_service.dart';
+import 'package:orbit/core/services/host_key_service.dart';
+import 'package:orbit/core/utils/error_mapper.dart';
 import 'package:orbit/features/settings/providers/settings_provider.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -42,7 +45,29 @@ const List<int> _kReconnectDelays = [3, 5, 10, 20, 30];
 /// - SSH hang / timeout: 10-second hard cap on every SSH operation.
 /// - Race conditions: per-server `_isConnecting` mutex prevents duplicate conns.
 /// - Zombie sockets: every failure path explicitly closes the SSH client.
-class ServerMonitorViewModel extends AsyncNotifier<void>
+/// State class tracking per-server history ticks and connection states.
+/// Allows fine-grained widget subscriptions using .select() [LOGIC-004].
+class ServerMonitorState {
+  final Map<String, int> historyTicks;
+  final Map<String, SshConnectionState> connectionStates;
+
+  const ServerMonitorState({
+    this.historyTicks = const {},
+    this.connectionStates = const {},
+  });
+
+  ServerMonitorState copyWith({
+    Map<String, int>? historyTicks,
+    Map<String, SshConnectionState>? connectionStates,
+  }) {
+    return ServerMonitorState(
+      historyTicks: historyTicks ?? this.historyTicks,
+      connectionStates: connectionStates ?? this.connectionStates,
+    );
+  }
+}
+
+class ServerMonitorViewModel extends AsyncNotifier<ServerMonitorState>
     with WidgetsBindingObserver {
   // ── SSH state (per server) ─────────────────────────────────────────────
   final Map<String, SSHClient> _sshClients = {};
@@ -80,7 +105,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
   // ── Build ──────────────────────────────────────────────────────────────
 
   @override
-  Future<void> build() async {
+  Future<ServerMonitorState> build() async {
     final hiveBox = await ref.watch(hiveProvider.future);
     final secureStorage = ref.read(secureStorageServiceProvider);
     _repository = ServerRepository(hiveBox, secureStorage);
@@ -108,7 +133,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       next,
     ) {
       _updateMutex = _updateMutex.then((_) async {
-        final newList = next.valueOrNull;
+        final newList = next.value;
         if (newList == null) return;
 
         final newIds = newList.map((s) => s.id).toSet();
@@ -132,6 +157,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       _connectivitySub?.cancel();
       stopAllMonitoring();
     });
+
+    return ServerMonitorState(
+      connectionStates: Map.unmodifiable(_connectionStates),
+    );
   }
 
   // ── App Lifecycle Observer [Fix 1] ─────────────────────────────────────
@@ -169,7 +198,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
 
   void clearServerHistory(String serverId) {
     _serverHistories[serverId] = [];
-    state = const AsyncValue.data(null);
+    _notifyHistoryUpdated(serverId);
   }
 
   Future<void> startMonitoring(String serverId) async {
@@ -201,6 +230,17 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     }
   }
 
+  /// Safely stops all monitoring sessions, waits for teardown, and restarts them [LOGIC-007].
+  /// Used by pull-to-refresh on HomeScreen to eliminate race conditions and badge flickering.
+  Future<void> refreshAll() async {
+    debugPrint('ServerMonitor: Refreshing all server connections');
+    await stopAllMonitoring();
+    final servers = await _repository.getAllServers();
+    for (final server in servers) {
+      await startMonitoring(server.id);
+    }
+  }
+
   /// Tears down the existing SSH session for [serverId] and re-initiates a
   /// fresh connection using the latest credentials from the database.
   ///
@@ -224,9 +264,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     _cpuStates.remove(serverId);
 
     // 5. Keep the server tracked but transition to connecting state.
-    _connectionStates[serverId] = SshConnectionState.connecting;
+    _setConnectionState(serverId, SshConnectionState.connecting);
     _loadingNotifier.startLoading(serverId);
-    state = const AsyncValue.data(null);
 
     // 6. Kick off a new connection with fresh credentials from the DB.
     await _connectAndStartPolling(serverId);
@@ -365,9 +404,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     } on TimeoutException {
       debugPrint('ServerMonitor: SSH connect timed out for $serverId');
       _closeClient(serverId);
-      _setConnectionState(serverId, SshConnectionState.offline);
+      _setConnectionState(serverId, SshConnectionState.reconnecting);
       await _repository.setStatus(serverId, ServerStatus.error);
       _loadingNotifier.markError(serverId, 'Connection Timed Out');
+      _triggerReconnect(serverId);
     } on SocketException catch (e) {
       debugPrint('ServerMonitor: SocketException for $serverId: $e');
       _closeClient(serverId);
@@ -376,6 +416,16 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         serverId,
         'Host Unreachable: Check IP or Port',
       );
+      _setConnectionState(serverId, SshConnectionState.reconnecting);
+      _triggerReconnect(serverId);
+    } on HostKeyMismatchException catch (e) {
+      debugPrint('ServerMonitor: Host key mismatch for $serverId: $e');
+      _closeClient(serverId);
+      await _repository.setStatus(serverId, ServerStatus.error);
+      _loadingNotifier.markError(
+        serverId,
+        'Host Key Mismatch: Remote server fingerprint changed',
+      );
       _setConnectionState(serverId, SshConnectionState.offline);
     } catch (e) {
       final msg = e.toString();
@@ -383,17 +433,20 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
       _closeClient(serverId);
       await _repository.setStatus(serverId, ServerStatus.error);
 
-      // Fallback message mapping if DartSSH2 throws generic exception for auth
-      if (msg.toLowerCase().contains('auth')) {
+      if (_isFatalAuthError(e)) {
         _loadingNotifier.markError(
           serverId,
           'Authentication Failed: Invalid Username or Password/Key',
         );
+        _setConnectionState(serverId, SshConnectionState.offline);
       } else {
-        _loadingNotifier.markError(serverId, msg);
+        _loadingNotifier.markError(
+          serverId,
+          ErrorMapper.userFriendlyMessage(e),
+        );
+        _setConnectionState(serverId, SshConnectionState.reconnecting);
+        _triggerReconnect(serverId);
       }
-
-      _setConnectionState(serverId, SshConnectionState.offline);
     } finally {
       _isConnecting[serverId] = false; // Always release the mutex
     }
@@ -451,7 +504,7 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         _setConnectionState(serverId, SshConnectionState.connected);
       }
 
-      state = const AsyncValue.data(null);
+      _notifyHistoryUpdated(serverId);
       await _repository.updateSnapshot(serverId, stats);
     } on TimeoutException catch (e) {
       debugPrint('ServerMonitor: Poll timed out for $serverId: $e');
@@ -571,6 +624,18 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
           'Host Unreachable: Check IP or Port',
         );
         attempt++;
+      } on HostKeyMismatchException catch (e) {
+        debugPrint(
+          'ServerMonitor: Reconnect host key mismatch for $serverId: $e',
+        );
+        _closeClient(serverId);
+        _setConnectionState(serverId, SshConnectionState.offline);
+        await _repository.setStatus(serverId, ServerStatus.error);
+        _loadingNotifier.markError(
+          serverId,
+          'Host Key Mismatch: Remote server fingerprint changed',
+        );
+        break; // Stop reconnect loop for security: requires user intervention
       } catch (e) {
         final msg = e.toString();
         debugPrint(
@@ -578,8 +643,8 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         );
         _closeClient(serverId);
 
-        // HALT ON AUTH FAILURE
-        if (msg.toLowerCase().contains('auth')) {
+        // HALT ON GENUINE FATAL AUTH FAILURE
+        if (_isFatalAuthError(e)) {
           debugPrint(
             'ServerMonitor: FATAL auth error. Aborting reconnect loop.',
           );
@@ -593,7 +658,10 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         }
 
         _setConnectionState(serverId, SshConnectionState.reconnecting);
-        _loadingNotifier.markError(serverId, msg);
+        _loadingNotifier.markError(
+          serverId,
+          ErrorMapper.userFriendlyMessage(e),
+        );
         attempt++;
       } finally {
         _isConnecting[serverId] = false; // Always release [Fix 3]
@@ -632,7 +700,19 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
 
   void _setConnectionState(String serverId, SshConnectionState s) {
     _connectionStates[serverId] = s;
-    state = const AsyncValue.data(null);
+    final current = state.asData?.value ?? const ServerMonitorState();
+    final updatedConns = Map<String, SshConnectionState>.from(
+      current.connectionStates,
+    );
+    updatedConns[serverId] = s;
+    state = AsyncValue.data(current.copyWith(connectionStates: updatedConns));
+  }
+
+  void _notifyHistoryUpdated(String serverId) {
+    final current = state.asData?.value ?? const ServerMonitorState();
+    final updatedTicks = Map<String, int>.from(current.historyTicks);
+    updatedTicks[serverId] = (updatedTicks[serverId] ?? 0) + 1;
+    state = AsyncValue.data(current.copyWith(historyTicks: updatedTicks));
   }
 
   bool _isConnectionError(String message) {
@@ -647,6 +727,31 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         m.contains('eof');
   }
 
+  /// Distinguishes true, permanent credential rejection from transient connection/handshake drops.
+  bool _isFatalAuthError(dynamic e) {
+    if (e is SSHAuthFailError) return true;
+    if (e is SSHKeyDecryptError) return true;
+    final msg = e.toString().toLowerCase();
+    // Transient socket drops or connection closures before authentication are NOT fatal auth errors.
+    if (msg.contains('connection closed before authentication') ||
+        msg.contains('closed before authentication') ||
+        msg.contains('connection refused') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('host unreachable') ||
+        msg.contains('timed out')) {
+      return false;
+    }
+    // Genuine credential / permission rejection errors:
+    if (msg.contains('all authentication methods failed') ||
+        msg.contains('invalid passphrase') ||
+        msg.contains('invalid private key') ||
+        msg.contains('invalid username or password') ||
+        msg.contains('permission denied')) {
+      return true;
+    }
+    return false;
+  }
+
   // ── Isolate parsing ────────────────────────────────────────────────────
 
   Future<ServerStats> _parseInIsolate(
@@ -655,6 +760,21 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
     int prevTotal,
     int latencyMs,
   ) async {
+    // [LOGIC-007]: Only offload to Isolate if payload is unusually large (>32KB).
+    // Standard Linux stats payloads are 1-2KB, where Isolate.run thread spawning overhead
+    // thrashes OS threads and causes excessive battery drain every 3 seconds.
+    if (rawOutput.length > 32768) {
+      return Isolate.run(
+        () => _parseInIsolateHelper(
+          _ParseParams(
+            rawOutput: rawOutput,
+            prevIdle: prevIdle,
+            prevTotal: prevTotal,
+            latencyMs: latencyMs,
+          ),
+        ),
+      );
+    }
     return _parseInIsolateHelper(
       _ParseParams(
         rawOutput: rawOutput,
@@ -687,6 +807,11 @@ class ServerMonitorViewModel extends AsyncNotifier<void>
         kernelVersion: statsMap['kernelVersion'],
         diskUsed: statsMap['diskUsed'] ?? 0,
         diskTotal: statsMap['diskTotal'] ?? 0,
+        ramUsed: statsMap['ramUsed'] ?? 0,
+        ramTotal: statsMap['ramTotal'] ?? 0,
+        cpuModel: statsMap['cpuModel'] ?? '',
+        cpuCores: statsMap['cpuCores'] ?? 0,
+        cpuSpeed: statsMap['cpuSpeed'] ?? '',
       );
     } catch (e, stackTrace) {
       debugPrint('Isolate Parsing Error: $e\n$stackTrace');

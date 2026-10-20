@@ -36,6 +36,17 @@ abstract class Server with _$Server {
     @Default(0) int lastLatency,
     @Default(0) int lastDiskUsed, // Disk Used Bytes
     @Default(0) int lastDiskTotal, // Disk Total Bytes
+    // RAM Info
+    @Default(0) int lastRamUsed,
+    @Default(0) int lastRamTotal,
+
+    // CPU Info
+    @Default('') String cpuModel,
+    @Default(0) int cpuCores,
+    @Default('') String cpuSpeed,
+    @Default(0.0) double lastLoad1,
+    @Default(0.0) double lastLoad5,
+    @Default(0.0) double lastLoad15,
   }) = _Server;
 
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);

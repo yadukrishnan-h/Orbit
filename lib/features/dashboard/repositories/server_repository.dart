@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:orbit/core/data/entities/hive_server.dart';
 import 'package:orbit/core/models/server.dart';
@@ -15,32 +14,58 @@ class ServerRepository {
   ServerRepository(this._box, this._secureStorage);
 
   /// Watch all servers as a reactive stream, ordered by sortOrder.
-  /// UI should watch this stream for instant updates
+  /// UI should watch this stream for instant updates without Keystore IPC storms [LOGIC-009, SEC-005, SEC-006].
   Stream<List<Server>> watchAllServers() async* {
-    yield await getAllServers();
-    yield* _box.watch().asyncMap((_) async => await getAllServers());
+    yield getAllServersSync();
+    yield* _box.watch().map((_) => getAllServersSync());
   }
 
   /// Watch a single server by ID as a reactive stream
   /// Returns null if server doesn't exist
   Stream<Server?> watchServer(String id) async* {
-    yield await getServerById(id);
-    yield* _box.watch(key: id).asyncMap((event) async {
-      return await getServerById(id);
-    });
+    yield getServerByIdSync(id);
+    yield* _box.watch(key: id).map((_) => getServerByIdSync(id));
   }
 
-  /// Get a single server by ID
-  Future<Server?> getServerById(String id) async {
+  /// Get a single server by ID synchronously (without in-memory credentials [SEC-005, SEC-006])
+  Server? getServerByIdSync(String id) {
     final entity = _box.get(id);
-    return entity != null ? await _mapToDomainAsync(entity) : null;
+    return entity != null ? _mapToDomain(entity) : null;
   }
 
-  /// Get all servers
-  Future<List<Server>> getAllServers() async {
+  /// Get a single server by ID (without in-memory credentials [SEC-005, SEC-006])
+  Future<Server?> getServerById(String id) async {
+    return getServerByIdSync(id);
+  }
+
+  /// Get all servers synchronously (without in-memory credentials [SEC-005, SEC-006])
+  List<Server> getAllServersSync() {
     final entities = _box.values.toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return Future.wait(entities.map(_mapToDomainAsync));
+    return entities.map(_mapToDomain).toList();
+  }
+
+  /// Get all servers (without in-memory credentials [SEC-005, SEC-006])
+  Future<List<Server>> getAllServers() async {
+    return getAllServersSync();
+  }
+
+  /// Dedicated method strictly for EditServerScreen or credential editing flows [SEC-005, SEC-006].
+  /// Fetches password/passphrase and private key JIT from secure storage.
+  Future<Server> getServerWithCredentials(String serverId) async {
+    final entity = _box.get(serverId);
+    if (entity == null) {
+      throw StateError('Server with ID $serverId not found');
+    }
+    final password =
+        await _secureStorage.readCredential(serverId, 'password') ?? '';
+    final privateKey = await _secureStorage.readCredential(
+      serverId,
+      'privateKey',
+    );
+    return _mapToDomain(
+      entity,
+    ).copyWith(password: password, privateKey: privateKey);
   }
 
   /// Add a new server
@@ -50,7 +75,6 @@ class ServerRepository {
 
     await _secureStorage.saveCredential(server.id, 'password', server.password);
     if (server.privateKey != null) {
-      debugPrint("Saving private key of length: ${server.privateKey?.length}");
       await _secureStorage.saveCredential(
         server.id,
         'privateKey',
@@ -66,7 +90,6 @@ class ServerRepository {
 
     await _secureStorage.saveCredential(server.id, 'password', server.password);
     if (server.privateKey != null) {
-      debugPrint("Saving private key of length: ${server.privateKey?.length}");
       await _secureStorage.saveCredential(
         server.id,
         'privateKey',
@@ -128,6 +151,12 @@ class ServerRepository {
       existing.status =
           ServerStatus.online; // Mark as online on successful update
 
+      existing.lastRamUsed = stats.ramUsed;
+      existing.lastRamTotal = stats.ramTotal;
+      existing.cpuModel = stats.cpuModel;
+      existing.cpuCores = stats.cpuCores;
+      existing.cpuSpeed = stats.cpuSpeed;
+
       await _box.put(serverId, existing);
     }
   }
@@ -144,24 +173,15 @@ class ServerRepository {
 
   // --- Mappers ---
 
-  Future<Server> _mapToDomainAsync(HiveServer entity) async {
-    final password =
-        await _secureStorage.readCredential(entity.uuid, 'password') ?? '';
-    final privateKey = await _secureStorage.readCredential(
-      entity.uuid,
-      'privateKey',
-    );
-
-    debugPrint("Loaded private key of length: ${privateKey?.length}");
-
+  Server _mapToDomain(HiveServer entity) {
     return Server(
       id: entity.uuid,
       name: entity.name,
       hostname: entity.hostname,
       port: entity.port,
       username: entity.username,
-      password: password,
-      privateKey: privateKey,
+      password: '',
+      privateKey: null,
       authType: entity.authType,
       lastCpu: entity.lastCpu,
       lastRam: entity.lastRam,
@@ -178,6 +198,11 @@ class ServerRepository {
       ipAddress: entity.ipAddress ?? '',
       serverLocation: entity.serverLocation ?? '',
       lastLatency: entity.lastLatency ?? 0,
+      lastRamUsed: entity.lastRamUsed ?? 0,
+      lastRamTotal: entity.lastRamTotal ?? 0,
+      cpuModel: entity.cpuModel ?? '',
+      cpuCores: entity.cpuCores ?? 0,
+      cpuSpeed: entity.cpuSpeed ?? '',
     );
   }
 
@@ -203,6 +228,11 @@ class ServerRepository {
       ipAddress: domain.ipAddress,
       serverLocation: domain.serverLocation,
       lastLatency: domain.lastLatency,
+      lastRamUsed: domain.lastRamUsed,
+      lastRamTotal: domain.lastRamTotal,
+      cpuModel: domain.cpuModel,
+      cpuCores: domain.cpuCores,
+      cpuSpeed: domain.cpuSpeed,
     );
   }
 }

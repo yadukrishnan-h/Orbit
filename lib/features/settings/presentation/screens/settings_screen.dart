@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:in_app_update/in_app_update.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
@@ -11,7 +11,8 @@ import 'package:orbit/core/widgets/system_card.dart';
 import 'package:orbit/features/settings/presentation/widgets/language_tile.dart';
 import 'package:orbit/features/settings/presentation/widgets/poll_interval_tile.dart';
 import 'package:orbit/features/settings/presentation/widgets/biometrics_tile.dart';
-import 'package:orbit/features/settings/presentation/widgets/app_icon_tile.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:orbit/features/settings/providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -31,166 +32,267 @@ class SettingsScreen extends ConsumerWidget {
         ),
         elevation: 0,
       ),
-      body: SafeArea(
-        bottom: true,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSizes.p16),
-          children: [
-            // ── Group 1: Server Management ───────────────────────────
-            SystemCard(
-              padding: EdgeInsets.zero,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.p16,
-                  vertical: AppSizes.p4,
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSizes.p16,
+          AppSizes.p16,
+          AppSizes.p16,
+          MediaQuery.of(context).padding.bottom + 16,
+        ),
+        children: [
+          // ── Group 1: Server Management ───────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text('SERVERS', style: AppTheme.sectionTitleStyle),
+          ),
+          SystemCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.p16,
+                vertical: AppSizes.p6,
+              ),
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                leading: const Icon(
+                child: const Icon(
                   LucideIcons.server,
-                  color: AppTheme.textSecondary,
-                  size: AppSizes.iconNormal,
-                ),
-                title: Text(
-                  ref.tr('manage_servers'),
-                  style: GoogleFonts.inter(
-                    color: AppTheme.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: Text(
-                  ref.tr('manage_servers_subtitle'),
-                  style: GoogleFonts.inter(
-                    color: AppTheme.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: const Icon(
-                  LucideIcons.chevronRight,
-                  color: AppTheme.textSecondary,
+                  color: Colors.white,
                   size: 18,
                 ),
-                onTap: () => context.push('/manage-servers'),
               ),
-            ),
-
-            const SizedBox(height: AppSizes.p16),
-
-            // ── Group 2: App Preferences ──────────────────────────────
-            SystemCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  const LanguageTile(),
-                  _divider(),
-                  const PollIntervalTile(),
-                  _divider(),
-                  const BiometricsTile(),
-                  _divider(),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.p16,
-                      vertical: AppSizes.p4,
-                    ),
-                    leading: const Icon(
-                      Icons.password_rounded,
-                      color: AppTheme.textSecondary,
-                      size: AppSizes.iconNormal,
-                    ),
-                    title: Text(
-                      'Change Master PIN',
-                      style: GoogleFonts.inter(
-                        color: AppTheme.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Update the PIN used to secure the app',
-                      style: GoogleFonts.inter(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: const Icon(
-                      LucideIcons.chevronRight,
-                      color: AppTheme.textSecondary,
-                      size: 18,
-                    ),
-                    onTap: () => context.push('/change-pin'),
-                  ),
-                  _divider(),
-                  const AppIconTile(),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.p16),
-
-            // ── Group 3: App Updates ─────────────────────────────────
-            SystemCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.p16,
-                      vertical: AppSizes.p4,
-                    ),
-                    leading: const Icon(
-                      LucideIcons.info,
-                      color: AppTheme.textSecondary,
-                      size: AppSizes.iconNormal,
-                    ),
-                    title: Text(
-                      'About Orbit',
-                      style: GoogleFonts.inter(
-                        color: AppTheme.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    trailing: const Icon(
-                      LucideIcons.chevronRight,
-                      color: AppTheme.textSecondary,
-                      size: 18,
-                    ),
-                    onTap: () => context.push('/about'),
-                  ),
-                  const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: AppTheme.border,
-                    indent: AppSizes.p16,
-                    endIndent: AppSizes.p16,
-                  ),
-                  const _UpdateTile(),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.p32),
-
-            // App version footer
-            Center(
-              child: Text(
-                'Orbit v1.1.0',
-                style: GoogleFonts.firaCode(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.5),
-                  fontSize: 11,
+              title: Text(
+                ref.tr('manage_servers'),
+                style: GoogleFonts.inter(
+                  color: AppTheme.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+              subtitle: Text(
+                ref.tr('manage_servers_subtitle'),
+                style: GoogleFonts.inter(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              trailing: const Icon(
+                LucideIcons.chevronRight,
+                color: AppTheme.textSecondary,
+                size: 18,
+              ),
+              onTap: () => context.push('/manage-servers'),
             ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: AppSizes.p24),
+
+          // ── Group 2: App Preferences ──────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text('PREFERENCES', style: AppTheme.sectionTitleStyle),
+          ),
+          SystemCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                const LanguageTile(),
+                _divider(),
+                const PollIntervalTile(),
+                _divider(),
+                const BiometricsTile(),
+                _divider(),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.p16,
+                    vertical: AppSizes.p4,
+                  ),
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      LucideIcons.lock,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    'Change Master PIN',
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Update the PIN used to secure the app',
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    color: AppTheme.textSecondary,
+                    size: 18,
+                  ),
+                  onTap: () => context.push('/change-pin'),
+                ),
+                _divider(),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final settingsAsync = ref.watch(settingsProvider);
+                    final isGeoEnabled = settingsAsync.maybeWhen(
+                      data: (s) => s.isGeolocationEnabled,
+                      orElse: () => false,
+                    );
+                    return SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.p16,
+                        vertical: AppSizes.p4,
+                      ),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          LucideIcons.mapPin,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                      title: Text(
+                        'Server Geolocation',
+                        style: GoogleFonts.inter(
+                          color: AppTheme.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Look up server country & city via ipwho.is (HTTPS)',
+                        style: GoogleFonts.inter(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      value: isGeoEnabled,
+                      activeThumbColor: AppTheme.terminalMint,
+                      activeTrackColor: AppTheme.terminalMint.withValues(
+                        alpha: 0.3,
+                      ),
+                      onChanged: (val) {
+                        ref
+                            .read(settingsProvider.notifier)
+                            .setGeolocationEnabled(val);
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: AppSizes.p24),
+
+          // ── Group 3: App Updates ─────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text('SYSTEM & ABOUT', style: AppTheme.sectionTitleStyle),
+          ),
+          SystemCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.p16,
+                    vertical: AppSizes.p4,
+                  ),
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      LucideIcons.info,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    'About Orbit',
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    color: AppTheme.textSecondary,
+                    size: 18,
+                  ),
+                  onTap: () => context.push('/about'),
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: Colors.white.withValues(alpha: 0.05),
+                  indent: AppSizes.p16,
+                  endIndent: AppSizes.p16,
+                ),
+                const _UpdateTile(),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: AppSizes.p32),
+
+          // App version footer
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final version = snapshot.data?.version ?? '1.2.0';
+              final buildNumber = snapshot.data?.buildNumber;
+              final versionText =
+                  (buildNumber != null && buildNumber.isNotEmpty)
+                  ? 'Orbit v$version+$buildNumber'
+                  : 'Orbit v$version';
+              return Center(
+                child: Text(
+                  versionText,
+                  style: GoogleFonts.firaCode(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
   Widget _divider() {
-    return const Divider(
+    return Divider(
       height: 1,
-      thickness: 1,
-      color: AppTheme.border,
+      thickness: 0.5,
+      color: Colors.white.withValues(alpha: 0.05),
       indent: AppSizes.p16,
       endIndent: AppSizes.p16,
     );

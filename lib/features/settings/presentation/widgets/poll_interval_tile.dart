@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/settings/models/app_settings.dart';
@@ -22,10 +22,14 @@ class PollIntervalTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: const Icon(
-        LucideIcons.refreshCw,
-        color: AppTheme.textSecondary,
-        size: 20,
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(LucideIcons.refreshCw, color: Colors.white, size: 18),
       ),
       title: Text(
         ref.tr('auto_refresh'),
@@ -61,10 +65,13 @@ class PollIntervalTile extends ConsumerWidget {
         return StatefulBuilder(
           builder: (ctx, setState) {
             return AlertDialog(
-              backgroundColor: AppTheme.surface,
+              backgroundColor: const Color(0xFF141518),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppTheme.border),
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
               ),
               title: Text(
                 ref.tr('auto_refresh_interval'),
@@ -83,6 +90,7 @@ class PollIntervalTile extends ConsumerWidget {
                   children: AppSettings.pollIntervals.map((secs) {
                     return RadioListTile<int>(
                       value: secs,
+                      activeColor: AppTheme.terminalMint,
                       title: Text(
                         secs == 1
                             ? ref.tr('1_second')
@@ -110,7 +118,10 @@ class PollIntervalTile extends ConsumerWidget {
                   },
                   child: Text(
                     ref.tr('apply'),
-                    style: GoogleFonts.inter(color: AppTheme.primary),
+                    style: GoogleFonts.inter(
+                      color: AppTheme.terminalMint,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

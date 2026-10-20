@@ -28,8 +28,10 @@ class BiometricService {
     try {
       return await _auth.authenticate(
         localizedReason: reason,
-        biometricOnly: false, // Allow PIN as fallback
-        persistAcrossBackgrounding: true,
+        biometricOnly:
+            true, // Never fall back to OS passcode; use Orbit's PIN screen instead
+        persistAcrossBackgrounding:
+            false, // Dismiss prompt if app is backgrounded
       );
     } on LocalAuthException {
       return false;

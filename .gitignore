@@ -89,3 +89,8 @@ local.properties
 key.properties
 **/*.jks
 **/*.keystore
+
+# Local release manifests and developer verification notes
+RELEASE_PACKAGE_MANIFEST.md
+# Android root build output
+/android/build/

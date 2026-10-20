@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/services/hive_service.dart';
 
@@ -63,19 +64,19 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionState> {
       state = state.copyWith(progress: 0.1);
 
       // Initialize Hive database via providers
-      await _ref.watch(hiveProvider.future);
+      await _ref.read(hiveProvider.future);
       state = state.copyWith(progress: 0.3);
 
       // Initialize server service
-      await _ref.watch(serverServiceProvider.future);
+      await _ref.read(serverServiceProvider.future);
       state = state.copyWith(progress: 0.5);
 
       // Initialize repository
-      await _ref.watch(serverRepositoryProvider.future);
+      await _ref.read(serverRepositoryProvider.future);
       state = state.copyWith(progress: 0.7);
 
       // Verify we can access servers (even if empty list)
-      final repository = await _ref.watch(serverRepositoryProvider.future);
+      final repository = await _ref.read(serverRepositoryProvider.future);
       await repository.watchAllServers().first;
       state = state.copyWith(progress: 0.9);
 

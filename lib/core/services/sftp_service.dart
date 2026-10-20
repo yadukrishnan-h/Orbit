@@ -1,7 +1,13 @@
 import 'dart:async';
-// import 'dart:typed_data';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:orbit/core/services/host_key_service.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
+import 'package:orbit/core/services/ssh_service.dart';
+import 'package:orbit/core/utils/app_logger.dart';
 import 'package:orbit/features/files/data/remote_file.dart';
 
 /// Cache entry for directory listings
@@ -17,8 +23,10 @@ class _DirectoryCacheEntry {
   }
 }
 
-/// SFTP service with performance optimizations
+/// SFTP service with performance optimizations and hardened shell execution [SEC-001, SEC-014].
 class SftpService {
+  final HostKeyService? _hostKeyService;
+  final SecureStorageService? _secureStorage;
   SSHClient? _sshClient;
   SftpClient? _sftpClient;
   bool _isConnecting = false;
@@ -34,14 +42,27 @@ class SftpService {
   final _fileMetadataCache = <String, RemoteFile>{};
   static const int _maxMetadataCacheSize = 100;
 
-  SftpService();
+  SftpService([this._hostKeyService, this._secureStorage]);
 
-  /// Connect to SSH server with connection reuse
+  /// Escapes an argument for safe POSIX shell interpolation [SEC-001].
+  ///
+  /// Rejects null bytes and wraps the argument in single quotes, escaping
+  /// any embedded single quotes using `'\''`.
+  static String escapePosixShellArg(String arg) {
+    if (arg.contains('\u0000')) {
+      throw ArgumentError('POSIX shell argument cannot contain null bytes');
+    }
+    return "'${arg.replaceAll("'", r"'\''")}'";
+  }
+
+  /// Connect to SSH server with connection reuse and key/password authentication [SEC-014].
   Future<void> connect({
     required String host,
     required int port,
     required String username,
-    required String password,
+    String? password,
+    String? serverId,
+    String? privateKey,
   }) async {
     // Check if already connected to the same server
     if (_sshClient != null &&
@@ -50,53 +71,104 @@ class SftpService {
         _lastPort == port &&
         _lastUsername == username &&
         _sshClient!.isClosed == false) {
-      debugPrint('SFTP: Reusing existing connection');
+      AppLogger.debug('SFTP: Reusing existing connection');
       return;
     }
 
     if (_isConnecting) {
-      debugPrint('SFTP: Connection in progress');
+      AppLogger.debug('SFTP: Connection in progress');
       throw Exception('Connection already in progress');
     }
 
     _isConnecting = true;
     try {
-      debugPrint('SFTP: Connecting to $host:$port as $username...');
+      AppLogger.info('SFTP: Connecting to $host:$port as $username...');
 
       // Disconnect existing connection if different server
       if (_sshClient != null) {
         await disconnect();
       }
 
-      final socket = await SSHSocket.connect(host, port).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Connection timed out'),
-      );
+      var effectivePassword = password;
+      var effectivePrivateKey = privateKey;
 
-      _sshClient = SSHClient(
-        socket,
-        username: username,
-        onPasswordRequest: () => password,
-      );
+      // JIT credential lookup if serverId and secureStorage are available
+      if (serverId != null && serverId.isNotEmpty && _secureStorage != null) {
+        final secPass = await _secureStorage.readCredential(
+          serverId,
+          'password',
+        );
+        final secKey = await _secureStorage.readCredential(
+          serverId,
+          'privateKey',
+        );
+        if (secPass != null && secPass.isNotEmpty) effectivePassword = secPass;
+        if (secKey != null && secKey.isNotEmpty) effectivePrivateKey = secKey;
+      }
 
-      // Start the native SFTP subsystem
-      _sftpClient = await _sshClient!.sftp().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw Exception('SFTP subsystem connection timed out'),
-      );
+      final normalizedKey = effectivePrivateKey != null
+          ? SshService.normalizePem(effectivePrivateKey)
+          : null;
 
-      _lastHost = host;
-      _lastPort = port;
-      _lastUsername = username;
+      final String? validPassphrase =
+          (effectivePassword != null && effectivePassword.trim().isNotEmpty)
+          ? effectivePassword
+          : null;
 
-      // Clear cache when connecting to new server
-      _clearCache();
+      SSHSocket? socket;
+      try {
+        socket = await SSHSocket.connect(
+          host,
+          port,
+          timeout: const Duration(seconds: 10),
+        );
 
-      debugPrint('SFTP: Connected successfully');
-    } catch (e) {
-      debugPrint('SFTP: Connection failed: $e');
-      await disconnect();
-      throw Exception('Failed to connect to server: $e');
+        _sshClient = SSHClient(
+          socket,
+          username: username,
+          onPasswordRequest: () => effectivePassword ?? '',
+          identities: normalizedKey != null && normalizedKey.trim().isNotEmpty
+              ? SSHKeyPair.fromPem(normalizedKey, validPassphrase)
+              : null,
+          onVerifyHostKey:
+              (serverId != null &&
+                  serverId.isNotEmpty &&
+                  _hostKeyService != null)
+              ? (type, fingerprint) =>
+                    _hostKeyService.verifyHostKey(serverId, type, fingerprint)
+              : null,
+        );
+
+        // Authenticate
+        await _sshClient!.authenticated.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () =>
+              throw TimeoutException('SFTP authentication timed out'),
+        );
+
+        // Start the native SFTP subsystem
+        _sftpClient = await _sshClient!.sftp().timeout(
+          const Duration(seconds: 15),
+          onTimeout: () =>
+              throw TimeoutException('SFTP subsystem connection timed out'),
+        );
+
+        _lastHost = host;
+        _lastPort = port;
+        _lastUsername = username;
+
+        // Clear cache when connecting to new server
+        _clearCache();
+
+        AppLogger.info('SFTP: Connected successfully');
+      } catch (e) {
+        if (_sshClient == null) {
+          socket?.close();
+        }
+        AppLogger.error('SFTP: Connection failed: $e');
+        await disconnect();
+        throw Exception('Failed to connect to server: $e');
+      }
     } finally {
       _isConnecting = false;
     }
@@ -104,23 +176,31 @@ class SftpService {
 
   /// Disconnect from server and clear all caches
   Future<void> disconnect() async {
-    debugPrint('SFTP: Disconnecting...');
-    _sftpClient?.close();
-    _sshClient?.close();
+    AppLogger.debug('SFTP: Disconnecting...');
+    final sftp = _sftpClient;
+    final ssh = _sshClient;
     _sftpClient = null;
     _sshClient = null;
     _lastHost = null;
     _lastPort = null;
     _lastUsername = null;
     _clearCache();
-    debugPrint('SFTP: Disconnected');
+
+    try {
+      sftp?.close();
+      ssh?.close();
+    } catch (e) {
+      AppLogger.error('SFTP: Error during disconnect teardown: $e');
+    } finally {
+      AppLogger.debug('SFTP: Disconnected');
+    }
   }
 
   /// Clear all caches
   void _clearCache() {
     _directoryCache.clear();
     _fileMetadataCache.clear();
-    debugPrint('SFTP: Cache cleared');
+    AppLogger.debug('SFTP: Cache cleared');
   }
 
   /// Check if connected
@@ -135,18 +215,19 @@ class SftpService {
     // Check cache first
     final cachedEntry = _directoryCache[path];
     if (cachedEntry != null && !cachedEntry.isStale) {
-      debugPrint('SFTP: Cache hit for $path');
+      AppLogger.debug('SFTP: Cache hit for $path');
       return List.unmodifiable(cachedEntry.files);
     }
 
     try {
-      debugPrint('SFTP: Listing directory: $path');
+      AppLogger.debug('SFTP: Listing directory: $path');
 
       final items = await _sftpClient!
           .listdir(path)
           .timeout(
             const Duration(seconds: 15),
-            onTimeout: () => throw Exception('Directory listing timed out'),
+            onTimeout: () =>
+                throw TimeoutException('Directory listing timed out'),
           );
       final files = <RemoteFile>[];
 
@@ -161,7 +242,9 @@ class SftpService {
         _updateFileMetadataCache(file);
       }
 
-      debugPrint('SFTP: Successfully parsed ${files.length} files/directories');
+      AppLogger.debug(
+        'SFTP: Successfully parsed ${files.length} files/directories',
+      );
 
       // Sort: directories first, then files, alphabetically
       files.sort((a, b) {
@@ -173,7 +256,7 @@ class SftpService {
       _updateCache(path, files);
       return files;
     } catch (e) {
-      debugPrint('SFTP: Failed to list directory: $e');
+      AppLogger.error('SFTP: Failed to list directory: $e');
       throw Exception('Failed to list directory: $e');
     }
   }
@@ -267,33 +350,61 @@ class SftpService {
     }
   }
 
-  /// Download file with progress callback support
-  Future<Uint8List> downloadFile(
-    String path, {
-    void Function(int, int)? onProgress,
+  /// Downloads a remote file by streaming chunks directly to disk using [IOSink],
+  /// preventing Out-Of-Memory (OOM) crashes on large files.
+  /// If [destinationPath] is omitted, saves to a temporary directory file.
+  Future<File> downloadFile(
+    String remotePath, {
+    String? destinationPath,
+    void Function(int received, int total)? onProgress,
   }) async {
     if (_sftpClient == null) {
       throw Exception('Not connected to server');
     }
 
+    File? outFile;
+    IOSink? sink;
     try {
-      debugPrint('SFTP: Downloading file: $path');
+      AppLogger.debug('SFTP: Streaming download for file: $remotePath');
 
-      final file = await _sftpClient!.open(path);
+      final file = await _sftpClient!.open(remotePath);
       final attrs = await file.stat();
       final totalSize = attrs.size ?? 0;
 
-      final data = <int>[];
-      await for (final chunk in file.read()) {
-        data.addAll(chunk);
-        onProgress?.call(data.length, totalSize);
+      if (destinationPath != null) {
+        outFile = File(destinationPath);
+        final parent = outFile.parent;
+        if (!parent.existsSync()) {
+          parent.createSync(recursive: true);
+        }
+      } else {
+        final tempDir = await getTemporaryDirectory();
+        final sanitizedFileName = remotePath.split('/').last;
+        outFile = File('${tempDir.path}/$sanitizedFileName');
       }
 
-      debugPrint('SFTP: Downloaded ${data.length} bytes');
-      return Uint8List.fromList(data);
+      sink = outFile.openWrite();
+      int receivedBytes = 0;
+
+      await for (final chunk in file.read()) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        onProgress?.call(receivedBytes, totalSize);
+      }
+
+      await sink.flush();
+      AppLogger.debug('SFTP: Streamed $receivedBytes bytes to ${outFile.path}');
+      return outFile;
     } catch (e) {
-      debugPrint('SFTP: Failed to download file: $e');
+      AppLogger.error('SFTP: Failed to download file: $e');
+      if (outFile != null && outFile.existsSync()) {
+        try {
+          await outFile.delete();
+        } catch (_) {}
+      }
       throw Exception('Failed to download file: $e');
+    } finally {
+      await sink?.close();
     }
   }
 
@@ -308,7 +419,9 @@ class SftpService {
     }
 
     try {
-      debugPrint('SFTP: Uploading file to: $remotePath (${data.length} bytes)');
+      AppLogger.debug(
+        'SFTP: Uploading file to: $remotePath (${data.length} bytes)',
+      );
 
       // Create parent directory if needed
       final parentDir = remotePath.substring(0, remotePath.lastIndexOf('/'));
@@ -346,9 +459,64 @@ class SftpService {
       // Invalidate cache for parent directory
       invalidateCache(remotePath);
 
-      debugPrint('SFTP: Upload complete');
+      AppLogger.debug('SFTP: Upload complete');
     } catch (e) {
-      debugPrint('SFTP: Failed to upload file: $e');
+      AppLogger.error('SFTP: Failed to upload file: $e');
+      throw Exception('Failed to upload file: $e');
+    }
+  }
+
+  /// Upload file by streaming chunks directly to prevent Out-Of-Memory (OOM)
+  /// crashes on large files [UI-004].
+  Future<void> uploadFileStream(
+    String remotePath,
+    Stream<List<int>> stream,
+    int totalBytes, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (_sftpClient == null) {
+      throw Exception('Not connected to server');
+    }
+
+    try {
+      AppLogger.debug(
+        'SFTP: Streaming upload to: $remotePath ($totalBytes bytes)',
+      );
+
+      // Create parent directory if needed
+      final parentDir = remotePath.substring(0, remotePath.lastIndexOf('/'));
+      if (parentDir.isNotEmpty && parentDir != '/') {
+        try {
+          await createDirectory(parentDir);
+        } catch (_) {}
+      }
+
+      final file = await _sftpClient!.open(
+        remotePath,
+        mode:
+            SftpFileOpenMode.create |
+            SftpFileOpenMode.write |
+            SftpFileOpenMode.truncate,
+      );
+
+      final uint8Stream = stream.map<Uint8List>(
+        (chunk) => chunk is Uint8List ? chunk : Uint8List.fromList(chunk),
+      );
+
+      final writer = file.write(
+        uint8Stream,
+        onProgress: (sent) {
+          onProgress?.call(sent, totalBytes);
+        },
+      );
+
+      await writer.done;
+      await file.close();
+
+      invalidateCache(remotePath);
+      AppLogger.debug('SFTP: Streaming upload complete');
+    } catch (e) {
+      AppLogger.error('SFTP: Failed to stream upload file: $e');
       throw Exception('Failed to upload file: $e');
     }
   }
@@ -360,17 +528,17 @@ class SftpService {
     }
 
     try {
-      debugPrint('SFTP: Creating directory: $path');
+      AppLogger.debug('SFTP: Creating directory: $path');
       // dartssh2 sftp doesn't have a direct `mkdir -p`. We try recreating the exact directory
       await _sftpClient!.mkdir(path);
 
       // Invalidate parent directory cache
       invalidateCache(path);
 
-      debugPrint('SFTP: Directory created');
+      AppLogger.debug('SFTP: Directory created');
     } catch (e) {
       // DartSSH2 throws if directory exists. Let's assume it failed if it wasn't a pre-existing error.
-      debugPrint(
+      AppLogger.warning(
         'SFTP: Warning - Failed to create directory (might exist): $e',
       );
       // No rethrow here so that upload parent folder creation doesn't crash if it exists
@@ -384,38 +552,43 @@ class SftpService {
     }
 
     try {
-      debugPrint('SFTP: Deleting file: $path');
+      AppLogger.debug('SFTP: Deleting file: $path');
       await _sftpClient!.remove(path);
 
       // Invalidate cache
       invalidateCache(path);
 
-      debugPrint('SFTP: File deleted');
+      AppLogger.debug('SFTP: File deleted');
     } catch (e) {
-      debugPrint('SFTP: Failed to delete file: $e');
+      AppLogger.error('SFTP: Failed to delete file: $e');
       throw Exception('Failed to delete file: $e');
     }
   }
 
-  /// Delete directory
+  /// Delete directory safely avoiding shell injection [SEC-001].
   Future<void> deleteDirectory(String path) async {
-    if (_sftpClient == null) {
+    final trimmed = path.trim();
+    if (trimmed.isEmpty || trimmed == '.' || trimmed == '/' || trimmed == '~') {
+      throw ArgumentError(
+        'Refusing to delete unsafe or root directory path: $path',
+      );
+    }
+
+    if (_sftpClient == null || _sshClient == null) {
       throw Exception('Not connected to server');
     }
 
     try {
-      // Currently `dartssh2` native `_sftpClient!.rmdir` requires the directory to be empty.
-      debugPrint('SFTP: Deleting directory: $path');
-      await _sshClient!.run(
-        'rm -rf "$path"',
-      ); // Fallback to rm -rf for recursive deletion
+      final safePath = escapePosixShellArg(trimmed);
+      AppLogger.debug('SFTP: Deleting directory: $safePath');
+      await _sshClient!.run('rm -rf -- $safePath');
 
       // Invalidate cache
       invalidateCache(path);
 
-      debugPrint('SFTP: Directory deleted');
+      AppLogger.debug('SFTP: Directory deleted');
     } catch (e) {
-      debugPrint('SFTP: Failed to delete directory: $e');
+      AppLogger.error('SFTP: Failed to delete directory: $e');
       throw Exception('Failed to delete directory: $e');
     }
   }
@@ -427,16 +600,16 @@ class SftpService {
     }
 
     try {
-      debugPrint('SFTP: Renaming: $oldPath -> $newPath');
+      AppLogger.debug('SFTP: Renaming: $oldPath -> $newPath');
       await _sftpClient!.rename(oldPath, newPath);
 
       // Invalidate both old and new parent directories
       invalidateCache(oldPath);
       invalidateCache(newPath);
 
-      debugPrint('SFTP: Rename complete');
+      AppLogger.debug('SFTP: Rename complete');
     } catch (e) {
-      debugPrint('SFTP: Failed to rename: $e');
+      AppLogger.error('SFTP: Failed to rename: $e');
       throw Exception('Failed to rename: $e');
     }
   }
@@ -454,7 +627,7 @@ class SftpService {
     }
 
     try {
-      debugPrint('SFTP: Getting file info: $path');
+      AppLogger.debug('SFTP: Getting file info: $path');
 
       final attr = await _sftpClient!.stat(path);
       final filename = path.split('/').last;
@@ -481,7 +654,7 @@ class SftpService {
       _updateFileMetadataCache(file);
       return file;
     } catch (e) {
-      debugPrint('SFTP: Failed to get file info: $e');
+      AppLogger.error('SFTP: Failed to get file info: $e');
       return null;
     }
   }
@@ -496,16 +669,17 @@ class SftpService {
     }
   }
 
-  /// Get disk usage info for path
+  /// Get disk usage info for path [SEC-001, LOGIC-005]
   Future<Map<String, int>> getDiskUsage(String path) async {
     if (_sshClient == null) {
       throw Exception('Not connected to server');
     }
 
     try {
-      // Native SFTP client doesn't have disk usage out of the box (SFTP v3), so we still run df command over SSH
-      final result = await _sshClient!.run('df -B1 "$path" | tail -1');
-      final output = String.fromCharCodes(result).trim();
+      final trimmed = path.trim();
+      final safePath = escapePosixShellArg(trimmed.isEmpty ? '.' : trimmed);
+      final result = await _sshClient!.run('df -B1 -- $safePath | tail -1');
+      final output = utf8.decode(result, allowMalformed: true).trim();
       final parts = output.split(RegExp(r'\s+'));
 
       if (parts.length >= 4) {
@@ -518,7 +692,7 @@ class SftpService {
 
       return {'total': 0, 'used': 0, 'available': 0};
     } catch (e) {
-      debugPrint('SFTP: Failed to get disk usage: $e');
+      AppLogger.error('SFTP: Failed to get disk usage: $e');
       return {'total': 0, 'used': 0, 'available': 0};
     }
   }

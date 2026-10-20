@@ -1,6 +1,6 @@
 # Privacy Policy for Orbit
 
-**Last updated: March 2026**
+**Last updated: October 2026**
 
 Yadu Krishnan H ("Developer") built the Orbit app as a Source-Available application. This SERVICE is provided at no cost and is intended for use as is.
 
@@ -14,6 +14,8 @@ Orbit is designed with a strict offline-first, privacy-centric architecture. **T
 - Biometric authentication states
 
 ...are encrypted and stored strictly locally on your physical device using secure database technologies. Orbit establishes direct, peer-to-peer network connections to your configured servers and does not route your traffic through any centralized, developer-owned, or proxy servers.
+
+If you choose to enable the optional Server Geolocation feature in Settings, the app queries the public `ipwho.is` service over HTTPS to look up the approximate country and city for your server's IP address. No credentials, tokens, or personal identifiers are ever transmitted.
 
 ### 2. Biometric Data
 

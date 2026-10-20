@@ -1,8 +1,18 @@
+import 'package:flutter/material.dart';
+
 /// Static translation dictionary for all 5 supported languages.
 /// Keys are snake_case identifiers; values are the translated strings.
 /// Add new keys here and call context.tr('key') in the UI.
 class AppTranslations {
   AppTranslations._();
+
+  static const List<Locale> supportedLocales = [
+    Locale('en'),
+    Locale('es'),
+    Locale('zh'),
+    Locale('hi'),
+    Locale('fr'),
+  ];
 
   /// All translations keyed by language code then string key.
   static const Map<String, Map<String, String>> _translations = {
@@ -48,6 +58,7 @@ class AppTranslations {
       'cpu_usage': 'CPU Usage',
       'memory_usage': 'Memory Usage',
       'disk_usage': 'Disk Usage',
+      'system_load_average': 'System Load Average',
 
       // Chart / metric labels
       'total_load': 'Total Load',

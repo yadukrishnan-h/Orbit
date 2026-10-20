@@ -18,7 +18,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -41,3 +47,15 @@ jobs:
 
       - name: Run unit tests
         run: flutter test
+
+      - name: Verify release compilation with Dart obfuscation
+        run: flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols
+
+      - name: Archive release APK and debug symbols [REV-001]
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-release-artifacts
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/symbols
+          if-no-files-found: error

@@ -7,6 +7,10 @@ class CpuTicks {
 
   CpuTicks(this.total, this.idle);
 
+  static final RegExp _cpuLineRegex = RegExp(
+    r'cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?',
+  );
+
   factory CpuTicks.parse(String rawData) {
     try {
       // 1. Find the line starting with "cpu " (aggregate)
@@ -25,10 +29,7 @@ class CpuTicks {
 
       // 2. Extract numbers using Regex (handles multiple spaces)
       // Matches: cpu  <user> <nice> <system> <idle> <iowait> <irq> <softirq> <steal>
-      final RegExp regExp = RegExp(
-        r'cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?',
-      );
-      final match = regExp.firstMatch(cpuLine);
+      final match = _cpuLineRegex.firstMatch(cpuLine);
 
       if (match == null) {
         debugPrint(
@@ -65,9 +66,10 @@ class CpuTicks {
 
 class LinuxParser {
   static const String linuxMetricsCommand =
-      r'cat /proc/stat; echo "|||"; free -b; echo "|||"; df -k /; echo "|||"; cat /proc/uptime; echo "|||"; hostname; echo "|||"; hostname -I || ip addr show; echo "|||"; cat /etc/os-release; echo "|||"; uname -r; exit';
+      'cat /proc/stat; echo "|||"; free -b; echo "|||"; df -k /; echo "|||"; cat /proc/uptime; echo "|||"; hostname; echo "|||"; hostname -I | awk \'{print \$1}\'; echo "|||"; grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d \'"\'; echo "|||"; uname -r; echo "|||"; (lscpu 2>/dev/null | grep -E "Model name|CPU\\(s\\)|CPU max MHz" || cat /proc/cpuinfo | grep -E "model name|cpu MHz" | head -n 5); exit';
 
   static final RegExp _whiteSpace = RegExp(r'\s+');
+  static final RegExp _diskPercentageRegex = RegExp(r'\s+(\d+)%');
 
   /// Parses /proc/stat CPU line: "cpu  2255 34 2290 22625563 6290 127 456"
   /// Returns [idle, total]
@@ -123,24 +125,42 @@ class LinuxParser {
   }
 
   /// Parses memory (RAM) usage from `free -b`
-  /// Returns percentage 0.0-100.0 (High Precision)
-  static double parseRam(String output) {
+  /// Returns map with percentage, used bytes, and total bytes
+  static Map<String, dynamic> parseRam(String output) {
     try {
       final lines = output.trim().split('\n');
-      if (lines.length < 2) return 0.0;
+      String? memLine;
+      for (var line in lines) {
+        if (line.trim().startsWith('Mem:')) {
+          memLine = line.trim();
+          break;
+        }
+      }
 
-      // Header: total used free shared buff/cache available
-      // Mem: 16000000 8000000 ... ... ... 7000000
-      final parts = lines[1].trim().split(_whiteSpace);
-      if (parts.length < 7) return 0.0;
+      if (memLine == null) return {'pct': 0.0, 'used': 0, 'total': 0};
 
-      final total = double.tryParse(parts[1]) ?? 0;
-      final available = double.tryParse(parts[6]) ?? 0;
+      final parts = memLine.split(_whiteSpace);
+      if (parts.length < 3) return {'pct': 0.0, 'used': 0, 'total': 0};
 
-      if (total == 0) return 0.0;
-      return ((total - available) / total * 100).clamp(0.0, 100.0);
+      final total = int.tryParse(parts[1]) ?? 0;
+      final used = int.tryParse(parts[2]) ?? 0;
+
+      // Some versions of free don't have parts[6] (available)
+      final available = parts.length > 6
+          ? (int.tryParse(parts[6]) ?? 0)
+          : (total - used);
+
+      if (total == 0) return {'pct': 0.0, 'used': 0, 'total': 0};
+
+      // Calculate percentage based on (total - available)
+      final usedBytes = total - available;
+      // If usedBytes is 0 but parts[2] (used) is not, fallback to parts[2]
+      final actualUsed = usedBytes > 0 ? usedBytes : used;
+      final pct = (actualUsed / total * 100).clamp(0.0, 100.0);
+
+      return {'pct': pct, 'used': actualUsed, 'total': total};
     } catch (e) {
-      return 0.0;
+      return {'pct': 0.0, 'used': 0, 'total': 0};
     }
   }
 
@@ -179,8 +199,7 @@ class LinuxParser {
       }
 
       // Fallback to Use% regex if byte parsing fails
-      final RegExp regExp = RegExp(r'\s+(\d+)%');
-      final matches = regExp.allMatches(output);
+      final matches = _diskPercentageRegex.allMatches(output);
       if (matches.isNotEmpty) {
         for (final match in matches) {
           final val = int.tryParse(match.group(1) ?? '');
@@ -223,6 +242,47 @@ class LinuxParser {
     }
   }
 
+  /// Parses `lscpu` output for CPU details
+  static Map<String, dynamic> parseCpuHardware(String output) {
+    try {
+      String model = '';
+      int cores = 0;
+      String speed = '';
+
+      final lines = output.trim().split('\n');
+      for (var line in lines) {
+        final lowerLine = line.toLowerCase();
+        if (lowerLine.contains('model name') ||
+            lowerLine.contains('cpu model')) {
+          model = line.split(':')[1].trim();
+        } else if ((lowerLine.startsWith('cpu(s):') ||
+                lowerLine.contains('processor')) &&
+            !lowerLine.contains('on-line')) {
+          final val = int.tryParse(line.split(':')[1].trim()) ?? 0;
+          if (val > 0) cores = val;
+        } else if (lowerLine.contains('cpu max mhz') ||
+            lowerLine.contains('cpu mhz')) {
+          final mhzStr = line.split(':')[1].trim();
+          final mhz = double.tryParse(mhzStr) ?? 0;
+          if (mhz > 0) {
+            speed = mhz > 1000
+                ? '${(mhz / 1000).toStringAsFixed(2)} GHz'
+                : '${mhz.toStringAsFixed(0)} MHz';
+          }
+        }
+      }
+
+      // Fallback for cores if using /proc/cpuinfo (which doesn't give aggregate CPU(s))
+      if (cores == 0 && output.contains('model name')) {
+        cores = output.split('model name').length - 1;
+      }
+
+      return {'model': model, 'cores': cores, 'speed': speed};
+    } catch (e) {
+      return {'model': '', 'cores': 0, 'speed': ''};
+    }
+  }
+
   /// Bulletproof parsing of atomic output
   static Map<String, dynamic> parseAll(
     String raw, {
@@ -248,7 +308,14 @@ class LinuxParser {
     }
 
     // 2. RAM
-    final ramPct = _safeParseDouble(parts[1], parseRam, 0.0);
+    final ramData = _safeParseMap(parts[1], parseRam, {
+      'pct': 0.0,
+      'used': 0,
+      'total': 0,
+    });
+    final ramPct = ramData['pct'] as double;
+    final ramUsed = ramData['used'] as int;
+    final ramTotal = ramData['total'] as int;
 
     // 3. Disk
     final diskData = _safeParseMap(parts[2], parseDisk, {
@@ -266,36 +333,28 @@ class LinuxParser {
     // 5. Metadata (Optional parts 5-8)
     final hostname = parts.length > 4 ? parts[4].trim() : '';
 
-    // IP Address extraction - can be messy if multiple IPs
+    // IP Address extraction
     String ipAddress = parts.length > 5 ? parts[5].trim() : '';
     if (ipAddress.contains(' ')) {
       ipAddress = ipAddress.split(' ').first;
     }
 
-    // OS Distro Parsing (Robust Regex from /etc/os-release content)
-    final rawOsRelease = parts.length > 6 ? parts[6] : '';
-    String osDistro = 'Linux';
-    if (rawOsRelease.isNotEmpty) {
-      // Look for PRETTY_NAME="Ubuntu 22.04 LTS"
-      final prettyNameMatch = RegExp(
-        r'PRETTY_NAME="([^"]+)"',
-      ).firstMatch(rawOsRelease);
-      if (prettyNameMatch != null) {
-        osDistro = prettyNameMatch.group(1) ?? 'Linux';
-      } else {
-        // Fallback to NAME="Ubuntu"
-        final nameMatch = RegExp(r'NAME="([^"]+)"').firstMatch(rawOsRelease);
-        if (nameMatch != null) {
-          osDistro = nameMatch.group(1) ?? 'Linux';
-        }
-      }
-    }
+    // OS Distro Parsing - refined to handle the output of: grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"'
+    final rawOsRelease = parts.length > 6 ? parts[6].trim() : '';
+    String osDistro = rawOsRelease.isNotEmpty ? rawOsRelease : 'Linux';
 
     final kernelVersion = parts.length > 7 ? parts[7].trim() : '';
+
+    // 9. CPU Hardware (Part 8)
+    final cpuHardware = parts.length > 8
+        ? parseCpuHardware(parts[8])
+        : {'model': '', 'cores': 0, 'speed': ''};
 
     return {
       'cpuPct': cpuPct,
       'ramPct': ramPct,
+      'ramUsed': ramUsed,
+      'ramTotal': ramTotal,
       'diskPct': diskPct,
       'uptime': uptime,
       'cpuIdle': currIdle,
@@ -306,19 +365,13 @@ class LinuxParser {
       'kernelVersion': kernelVersion,
       'diskUsed': diskUsed,
       'diskTotal': diskTotal,
+      'cpuModel': cpuHardware['model'],
+      'cpuCores': cpuHardware['cores'],
+      'cpuSpeed': cpuHardware['speed'],
+      'load1': 0.0,
+      'load5': 0.0,
+      'load15': 0.0,
     };
-  }
-
-  static double _safeParseDouble(
-    String raw,
-    double Function(String) parser,
-    double fallback,
-  ) {
-    try {
-      return parser(raw);
-    } catch (e) {
-      return fallback;
-    }
   }
 
   static String _safeParseString(

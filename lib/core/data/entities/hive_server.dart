@@ -15,6 +15,11 @@ class HiveServer {
   double? lastDisk;
   int? lastDiskUsed;
   int? lastDiskTotal;
+  int? lastRamUsed;
+  int? lastRamTotal;
+  String? cpuModel;
+  int? cpuCores;
+  String? cpuSpeed;
   DateTime? lastSeen;
   String? osDistro;
   String? kernelVersion;
@@ -38,6 +43,11 @@ class HiveServer {
     this.lastDisk,
     this.lastDiskUsed,
     this.lastDiskTotal,
+    this.lastRamUsed,
+    this.lastRamTotal,
+    this.cpuModel,
+    this.cpuCores,
+    this.cpuSpeed,
     this.lastSeen,
     this.osDistro,
     this.kernelVersion,
@@ -89,13 +99,18 @@ class HiveServerAdapter extends TypeAdapter<HiveServer> {
         orElse: () => ServerStatus.unknown,
       ),
       sortOrder: fields[20] as int? ?? 0,
+      lastRamUsed: fields[21] as int?,
+      lastRamTotal: fields[22] as int?,
+      cpuModel: fields[23] as String?,
+      cpuCores: fields[24] as int?,
+      cpuSpeed: fields[25] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveServer obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(26)
       ..writeByte(0)
       ..write(obj.uuid)
       ..writeByte(1)
@@ -137,6 +152,16 @@ class HiveServerAdapter extends TypeAdapter<HiveServer> {
       ..writeByte(19)
       ..write(obj.status.name)
       ..writeByte(20)
-      ..write(obj.sortOrder);
+      ..write(obj.sortOrder)
+      ..writeByte(21)
+      ..write(obj.lastRamUsed)
+      ..writeByte(22)
+      ..write(obj.lastRamTotal)
+      ..writeByte(23)
+      ..write(obj.cpuModel)
+      ..writeByte(24)
+      ..write(obj.cpuCores)
+      ..writeByte(25)
+      ..write(obj.cpuSpeed);
   }
 }

@@ -5,6 +5,7 @@ import 'package:orbit/core/services/ssh_service.dart';
 import 'package:orbit/core/services/hive_service.dart';
 import 'package:orbit/features/dashboard/repositories/server_repository.dart';
 import 'package:orbit/core/services/secure_storage_service.dart';
+import 'package:orbit/core/services/host_key_service.dart';
 
 final serverServiceProvider = FutureProvider<ServerService>((ref) async {
   final repository = await ref.watch(serverRepositoryProvider.future);
@@ -13,7 +14,8 @@ final serverServiceProvider = FutureProvider<ServerService>((ref) async {
 
 final sshServiceProvider = Provider((ref) {
   final secureStorage = ref.read(secureStorageServiceProvider);
-  return SshService(secureStorage);
+  final hostKeyService = ref.watch(hostKeyServiceProvider);
+  return SshService(secureStorage, hostKeyService);
 });
 
 // Legacy serverListProvider removed in favor of MVVM stream provider.

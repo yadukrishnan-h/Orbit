@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:xterm/xterm.dart';
@@ -56,14 +56,53 @@ class TerminalState {
 // ---------------------------------------------------------------------------
 
 class TerminalNotifier extends StateNotifier<TerminalState> {
-  TerminalNotifier(this._ref) : super(TerminalState());
+  TerminalNotifier(this._ref) : super(TerminalState()) {
+    // Clean up active session if the current server is deleted from the database [LOGIC-008]
+    _ref.listen<AsyncValue<List<Server>>>(serverListStreamProvider, (
+      prev,
+      next,
+    ) {
+      final serverId = state.selectedServer?.id;
+      if (serverId != null) {
+        final servers = next.asData?.value;
+        if (servers != null && !servers.any((s) => s.id == serverId)) {
+          disconnect();
+        }
+      }
+    });
+  }
 
   final Ref _ref;
 
   SSHClient? _client;
   SSHSession? _session;
-  StreamSubscription<Uint8List>? _stdoutSub;
-  StreamSubscription<Uint8List>? _stderrSub;
+  StreamSubscription<String>? _stdoutSub;
+  StreamSubscription<String>? _stderrSub;
+  final StringBuffer _outputBuffer = StringBuffer();
+  Timer? _flushTimer;
+  static const int _maxBufferSize = 64 * 1024; // 64 KB backpressure threshold
+
+  void _handleTerminalOutput(String text) {
+    _outputBuffer.write(text);
+
+    // Apply backpressure if buffered text exceeds 64KB before flush timer fires [LOGIC-004]
+    if (_outputBuffer.length >= _maxBufferSize) {
+      _stdoutSub?.pause();
+      _stderrSub?.pause();
+    }
+
+    _flushTimer ??= Timer(const Duration(milliseconds: 16), _flushOutputBuffer);
+  }
+
+  void _flushOutputBuffer() {
+    if (_outputBuffer.isNotEmpty) {
+      state.terminal.write(_outputBuffer.toString());
+      _outputBuffer.clear();
+    }
+    _stdoutSub?.resume();
+    _stderrSub?.resume();
+    _flushTimer = null;
+  }
 
   // -------------------------------------------------------------------------
   // Public API
@@ -111,19 +150,26 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
         _session?.resizeTerminal(width, height);
       };
 
-      // Bridge SSH -> Terminal
-      _stdoutSub = _session!.stdout.listen(
-        (data) => state.terminal.write(utf8.decode(data)),
-        onDone: _onSessionDone,
-        onError: _onStreamError,
-        cancelOnError: false,
-      );
+      // Bridge SSH -> Terminal [LOGIC-003, LOGIC-004]
+      // Use stateful Utf8Decoder so multibyte chars split across TCP chunks never throw
+      _stdoutSub = _session!.stdout
+          .cast<List<int>>()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .listen(
+            _handleTerminalOutput,
+            onDone: _onSessionDone,
+            onError: _onStreamError,
+            cancelOnError: false,
+          );
 
-      _stderrSub = _session!.stderr.listen(
-        (data) => state.terminal.write(utf8.decode(data)),
-        onError: _onStreamError,
-        cancelOnError: false,
-      );
+      _stderrSub = _session!.stderr
+          .cast<List<int>>()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .listen(
+            _handleTerminalOutput,
+            onError: _onStreamError,
+            cancelOnError: false,
+          );
     } catch (e) {
       await _cleanup();
       state = state.copyWith(
@@ -148,10 +194,12 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
   void clearOutput() => state.terminal.write('\x1b[2J\x1b[H');
 
   Future<void> disconnect() async {
-    if (state.status == TerminalStatus.idle) return;
+    if (!mounted || state.status == TerminalStatus.idle) return;
     state = state.copyWith(status: TerminalStatus.disconnecting);
     await _cleanup();
-    state = TerminalState(terminal: state.terminal);
+    if (mounted) {
+      state = TerminalState(terminal: state.terminal);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -160,18 +208,30 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
 
   void _onSessionDone() {
     _cleanup();
-    state = TerminalState(terminal: state.terminal);
+    if (mounted) {
+      state = TerminalState(terminal: state.terminal);
+    }
   }
 
   void _onStreamError(Object error) {
     _cleanup();
-    state = state.copyWith(
-      status: TerminalStatus.error,
-      errorMessage: error.toString(),
-    );
+    if (mounted) {
+      state = state.copyWith(
+        status: TerminalStatus.error,
+        errorMessage: error.toString(),
+      );
+    }
   }
 
   Future<void> _cleanup() async {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    final term = mounted ? state.terminal : null;
+    if (_outputBuffer.isNotEmpty) {
+      term?.write(_outputBuffer.toString());
+      _outputBuffer.clear();
+    }
+
     await _stdoutSub?.cancel();
     await _stderrSub?.cancel();
     _stdoutSub = null;
@@ -182,12 +242,14 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
     _client = null;
 
     // Important: remove callbacks to prevent memory leaks or unexpected behavior
-    state.terminal.onOutput = null;
-    state.terminal.onResize = null;
+    term?.onOutput = null;
+    term?.onResize = null;
   }
 
   @override
   void dispose() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
     _cleanup();
     super.dispose();
   }
@@ -197,7 +259,6 @@ class TerminalNotifier extends StateNotifier<TerminalState> {
 // Provider
 // ---------------------------------------------------------------------------
 
-final terminalProvider =
-    StateNotifierProvider.autoDispose<TerminalNotifier, TerminalState>(
-      (ref) => TerminalNotifier(ref),
-    );
+final terminalProvider = StateNotifierProvider<TerminalNotifier, TerminalState>(
+  (ref) => TerminalNotifier(ref),
+);

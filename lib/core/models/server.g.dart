@@ -33,6 +33,14 @@ _Server _$ServerFromJson(Map<String, dynamic> json) => _Server(
   lastLatency: (json['lastLatency'] as num?)?.toInt() ?? 0,
   lastDiskUsed: (json['lastDiskUsed'] as num?)?.toInt() ?? 0,
   lastDiskTotal: (json['lastDiskTotal'] as num?)?.toInt() ?? 0,
+  lastRamUsed: (json['lastRamUsed'] as num?)?.toInt() ?? 0,
+  lastRamTotal: (json['lastRamTotal'] as num?)?.toInt() ?? 0,
+  cpuModel: json['cpuModel'] as String? ?? '',
+  cpuCores: (json['cpuCores'] as num?)?.toInt() ?? 0,
+  cpuSpeed: json['cpuSpeed'] as String? ?? '',
+  lastLoad1: (json['lastLoad1'] as num?)?.toDouble() ?? 0.0,
+  lastLoad5: (json['lastLoad5'] as num?)?.toDouble() ?? 0.0,
+  lastLoad15: (json['lastLoad15'] as num?)?.toDouble() ?? 0.0,
 );
 
 Map<String, dynamic> _$ServerToJson(_Server instance) => <String, dynamic>{
@@ -58,6 +66,14 @@ Map<String, dynamic> _$ServerToJson(_Server instance) => <String, dynamic>{
   'lastLatency': instance.lastLatency,
   'lastDiskUsed': instance.lastDiskUsed,
   'lastDiskTotal': instance.lastDiskTotal,
+  'lastRamUsed': instance.lastRamUsed,
+  'lastRamTotal': instance.lastRamTotal,
+  'cpuModel': instance.cpuModel,
+  'cpuCores': instance.cpuCores,
+  'cpuSpeed': instance.cpuSpeed,
+  'lastLoad1': instance.lastLoad1,
+  'lastLoad5': instance.lastLoad5,
+  'lastLoad15': instance.lastLoad15,
 };
 
 const _$AuthTypeEnumMap = {AuthType.password: 'password', AuthType.key: 'key'};

@@ -1,6 +1,6 @@
 # Terms of Service for Orbit
 
-**Last Updated:** March 2026
+**Last Updated:** October 2026
 
 These Terms of Service ("Terms") govern your access to and use of the Orbit mobile application ("Orbit", "the App", or "the Service"), developed by Yadu Krishnan H ("Developer"). By downloading, installing, or using Orbit, you agree to be bound by these Terms.
 
