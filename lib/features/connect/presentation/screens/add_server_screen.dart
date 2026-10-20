@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
+import 'package:orbit/core/services/secure_storage_service.dart';
 import 'package:orbit/core/theme/app_theme.dart';
-import 'package:orbit/core/widgets/system_card.dart';
 import 'package:orbit/features/dashboard/providers/dashboard_providers.dart';
 import 'package:uuid/uuid.dart';
 
@@ -30,8 +30,10 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   late final TextEditingController _privateKeyController;
+  late final TextEditingController _passphraseController;
 
   bool _obscurePassword = true;
+  bool _obscurePassphrase = true;
   AuthType _authType = AuthType.password;
 
   bool get _isEditMode => widget.existingServer != null;
@@ -53,9 +55,37 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
     _privateKeyController = TextEditingController(
       text: (s?.authType == AuthType.key) ? (s?.privateKey ?? '') : '',
     );
+    _passphraseController = TextEditingController(
+      text: (s?.authType == AuthType.key) ? (s?.password ?? '') : '',
+    );
     if (s != null) {
       _authType = s.authType;
+      if (s.password.isEmpty &&
+          (s.privateKey == null || s.privateKey!.isEmpty)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadExistingCredentials(s.id);
+        });
+      }
     }
+  }
+
+  Future<void> _loadExistingCredentials(String serverId) async {
+    try {
+      final repository = await ref.read(serverRepositoryProvider.future);
+      final serverWithCreds = await repository.getServerWithCredentials(
+        serverId,
+      );
+      if (mounted) {
+        setState(() {
+          if (serverWithCreds.authType == AuthType.password) {
+            _passwordController.text = serverWithCreds.password;
+          } else {
+            _privateKeyController.text = serverWithCreds.privateKey ?? '';
+            _passphraseController.text = serverWithCreds.password;
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -66,6 +96,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _privateKeyController.dispose();
+    _passphraseController.dispose();
     super.dispose();
   }
 
@@ -78,41 +109,46 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
     return InputDecoration(
       labelText: labelText,
       hintText: hintText,
-      labelStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+      labelStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
       hintStyle: const TextStyle(color: AppTheme.disabled, fontSize: 13),
       prefixIcon: Icon(prefixIcon, size: 18, color: AppTheme.textSecondary),
       suffixIcon: suffixIcon,
       filled: true,
-
-      fillColor: AppTheme.background,
+      fillColor: const Color(0xFF15181E),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.terminalMint, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppTheme.critical),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.critical, width: 0.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppTheme.critical, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
         title: Text(
           _isEditMode ? 'Edit Server' : 'Add Server',
@@ -137,38 +173,19 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hero Icon / Header
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _isEditMode ? LucideIcons.edit : LucideIcons.server,
-                          size: 40,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isEditMode
-                            ? 'UPDATE SERVER CONFIGURATION'
-                            : 'CONNECT TO A NEW SYSTEM',
-                        style: AppTheme.sectionHeaderStyle,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
                 // General Info Section
-                Text('GENERAL INFORMATION', style: AppTheme.sectionHeaderStyle),
+                Text('GENERAL INFORMATION', style: AppTheme.sectionTitleStyle),
                 const SizedBox(height: 12),
-                SystemCard(
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 0.5,
+                    ),
+                  ),
                   child: Column(
                     children: [
                       TextFormField(
@@ -189,7 +206,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -244,9 +261,18 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                 const SizedBox(height: 24),
 
                 // Authentication Section
-                Text('AUTHENTICATION', style: AppTheme.sectionHeaderStyle),
+                Text('AUTHENTICATION', style: AppTheme.sectionTitleStyle),
                 const SizedBox(height: 12),
-                SystemCard(
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 0.5,
+                    ),
+                  ),
                   child: Column(
                     children: [
                       TextFormField(
@@ -267,10 +293,10 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<AuthType>(
                         initialValue: _authType,
-                        dropdownColor: AppTheme.surface,
+                        dropdownColor: const Color(0xFF15181E),
                         style: GoogleFonts.inter(
                           color: AppTheme.textPrimary,
                           fontSize: 14,
@@ -294,7 +320,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           });
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       if (_authType == AuthType.password)
                         TextFormField(
                           controller: _passwordController,
@@ -317,6 +343,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                             ),
                           ),
                           obscureText: _obscurePassword,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          enableIMEPersonalizedLearning: false,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 14,
@@ -329,7 +358,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                             return null;
                           },
                         )
-                      else
+                      else ...[
                         TextFormField(
                           controller: _privateKeyController,
                           decoration: _buildInputDecoration(
@@ -339,6 +368,9 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           ),
                           minLines: 5,
                           maxLines: null,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          enableIMEPersonalizedLearning: false,
                           style: GoogleFonts.firaCode(
                             fontSize: 12,
                             color: AppTheme.textPrimary,
@@ -351,22 +383,65 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passphraseController,
+                          decoration: _buildInputDecoration(
+                            labelText: 'Private Key Passphrase (Optional)',
+                            prefixIcon: LucideIcons.lock,
+                            hintText: 'Leave empty if key has no passphrase',
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassphrase
+                                    ? LucideIcons.eye
+                                    : LucideIcons.eyeOff,
+                                size: 18,
+                                color: AppTheme.textSecondary,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassphrase = !_obscurePassphrase;
+                                });
+                              },
+                            ),
+                          ),
+                          obscureText: _obscurePassphrase,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          enableIMEPersonalizedLearning: false,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
                 // Submit Button
-                SizedBox(
+                Container(
                   width: double.infinity,
-                  height: 54,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.heroGreenGradient,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.terminalMint.withValues(alpha: 0.3),
+                        blurRadius: 18,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: const Color(0xFF0A0A0C),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(28),
                       ),
                     ),
                     onPressed: _handleSubmit,
@@ -378,6 +453,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                               ? LucideIcons.save
                               : LucideIcons.plusCircle,
                           size: 20,
+                          color: const Color(0xFF0A0A0C),
                         ),
                         const SizedBox(width: 10),
                         Text(
@@ -385,19 +461,96 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0A0A0C),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                if (_isEditMode) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.warning,
+                        side: BorderSide(
+                          color: AppTheme.warning.withValues(alpha: 0.5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      icon: const Icon(LucideIcons.shieldAlert, size: 18),
+                      label: Text(
+                        'Reset Pinned Host Key',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      onPressed: () =>
+                          _confirmResetHostKey(widget.existingServer!.id),
+                    ),
+                  ),
+                ],
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmResetHostKey(String serverId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E222B),
+        title: Text(
+          'Reset Host Key?',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'This will clear the stored host key fingerprint for this server. On the next connection, the host key will be re-pinned via Trust-On-First-Use (TOFU). Use this if your server was re-imaged or rebuilt.',
+          style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.warning),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref
+          .read(secureStorageServiceProvider)
+          .deleteHostKeyFingerprint(serverId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pinned host key cleared successfully.'),
+            backgroundColor: AppTheme.surface,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleSubmit() async {
@@ -413,7 +566,10 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
       final username = _usernameController.text.trim();
       final password = _authType == AuthType.password
           ? _passwordController.text
-          : _privateKeyController.text.trim();
+          : _passphraseController.text;
+      final privateKey = _authType == AuthType.key
+          ? _privateKeyController.text.trim()
+          : null;
 
       // Sanitize hostname (strip if user accidentally included a port).
       if (hostname.contains(':') && !hostname.contains(']')) {
@@ -427,14 +583,23 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
         // ── EDIT MODE ───────────────────────────────────────────────────
         final existing = widget.existingServer!;
 
+        final hostOrPortChanged =
+            existing.hostname.trim() != hostname.trim() ||
+            existing.port != port;
+        if (hostOrPortChanged) {
+          await ref
+              .read(secureStorageServiceProvider)
+              .deleteHostKeyFingerprint(existing.id);
+        }
+
         final updatedServer = existing.copyWith(
           name: name,
           hostname: hostname,
           port: port,
           username: username,
           authType: _authType,
-          password: _authType == AuthType.password ? password : '',
-          privateKey: _authType == AuthType.key ? password : null,
+          password: password,
+          privateKey: privateKey,
         );
 
         // Persist changes to Hive/Secure Storage (updateServer preserves the internal ID).
@@ -443,7 +608,7 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
 
         // Force SSH session teardown and reconnect with fresh credentials.
         final vm = ref.read(serverMonitorViewModelProvider.notifier);
-        vm.reinitializeServer(existing.id);
+        await vm.reinitializeServer(existing.id);
       } else {
         // ── ADD MODE ────────────────────────────────────────────────────
         final serverId = const Uuid().v4();
@@ -455,8 +620,8 @@ class AddServerScreenState extends ConsumerState<AddServerScreen> {
           port: port,
           username: username,
           authType: _authType,
-          password: _authType == AuthType.password ? password : '',
-          privateKey: _authType == AuthType.key ? password : null,
+          password: password,
+          privateKey: privateKey,
         );
 
         final repository = await ref.read(serverRepositoryProvider.future);

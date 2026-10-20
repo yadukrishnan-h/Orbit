@@ -10,6 +10,8 @@ We currently provide security updates for the following versions of Orbit:
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 1.2.x   | :white_check_mark: |
+| 1.1.x   | :white_check_mark: |
 | 1.0.x   | :white_check_mark: |
 | < 1.0.0 | :x:                |
 
@@ -32,7 +34,7 @@ We will acknowledge your report within **48 hours** and provide a timeline for a
 - **Zero-Knowledge Architecture:** Your SSH keys, passwords, and passphrases are stored strictly in your device's secure hardware (Keystore/Keychain) and are never transmitted to any external server.
 - **No Middlemen:** Orbit establishes direct, encrypted peer-to-peer connections between your device and your server.
 - **No Tracking:** We do not use third-party analytics or tracking scripts that could leak metadata about your infrastructure.
-- **Open Source Transparency:** Our code is open for public audit to ensure our security claims are verifiable by the community.
+- **Code Transparency:** Our source code is made available for public audit to ensure our security claims are verifiable.
 
 ## Security Audits
 

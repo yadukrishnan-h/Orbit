@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/widgets/system_card.dart';
@@ -74,7 +74,12 @@ class _LicensesScreenState extends State<LicensesScreen> {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(AppSizes.p16),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.p16,
+              AppSizes.p16,
+              AppSizes.p16,
+              MediaQuery.of(context).padding.bottom + 16,
+            ),
             itemCount: licenses.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(height: AppSizes.p16),
@@ -97,6 +102,8 @@ class _LicensesScreenState extends State<LicensesScreen> {
                   child: ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     childrenPadding: const EdgeInsets.only(top: AppSizes.p8),
+                    iconColor: AppTheme.terminalMint,
+                    collapsedIconColor: AppTheme.textSecondary,
                     title: Text(
                       packageName,
                       style: GoogleFonts.inter(

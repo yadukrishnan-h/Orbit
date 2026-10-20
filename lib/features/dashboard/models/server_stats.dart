@@ -22,5 +22,13 @@ abstract class ServerStats with _$ServerStats {
     @Default('') String kernelVersion,
     @Default(0) int diskUsed,
     @Default(0) int diskTotal,
+    @Default(0) int ramUsed,
+    @Default(0) int ramTotal,
+    @Default('') String cpuModel,
+    @Default(0) int cpuCores,
+    @Default('') String cpuSpeed,
+    @Default(0.0) double load1,
+    @Default(0.0) double load5,
+    @Default(0.0) double load15,
   }) = _ServerStats;
 }

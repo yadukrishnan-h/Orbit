@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
@@ -117,13 +117,11 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
     }
   }
 
-  Future<void> _onReorder(
+  Future<void> _onReorderItem(
     List<Server> currentServers,
     int oldIndex,
     int newIndex,
   ) async {
-    if (newIndex > oldIndex) newIndex--;
-
     final reordered = List<Server>.from(currentServers);
     final moved = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, moved);
@@ -179,17 +177,38 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    LucideIcons.server,
-                    size: 64,
-                    color: AppTheme.border,
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: AppTheme.terminalMint.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.terminalMint.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Icon(
+                      LucideIcons.server,
+                      size: 36,
+                      color: AppTheme.terminalMint,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No Servers',
                     style: GoogleFonts.inter(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Add servers from the home dashboard',
+                    style: GoogleFonts.inter(
                       color: AppTheme.textSecondary,
-                      fontSize: 16,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -198,11 +217,16 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
           }
 
           return ReorderableListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            buildDefaultDragHandles: !_selectMode,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).padding.bottom + 16,
+            ),
+            buildDefaultDragHandles: false,
             itemCount: servers.length,
-            onReorder: (oldIndex, newIndex) =>
-                _onReorder(servers, oldIndex, newIndex),
+            onReorderItem: (oldIndex, newIndex) =>
+                _onReorderItem(servers, oldIndex, newIndex),
             proxyDecorator: (child, index, animation) {
               return AnimatedBuilder(
                 animation: animation,
@@ -210,13 +234,13 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
                   color: Colors.transparent,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.primary),
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.terminalMint),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.2),
-                          blurRadius: 12,
+                          color: AppTheme.terminalMint.withValues(alpha: 0.2),
+                          blurRadius: 16,
                         ),
                       ],
                     ),
@@ -234,6 +258,7 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _ServerRow(
                   server: server,
+                  index: index,
                   isSelectMode: _selectMode,
                   isSelected: isSelected,
                   onTap: _selectMode ? () => _toggleSelection(server.id) : null,
@@ -259,6 +284,7 @@ class _ManageServersScreenState extends ConsumerState<ManageServersScreen> {
 
 class _ServerRow extends StatelessWidget {
   final Server server;
+  final int index;
   final bool isSelectMode;
   final bool isSelected;
   final VoidCallback? onTap;
@@ -266,6 +292,7 @@ class _ServerRow extends StatelessWidget {
 
   const _ServerRow({
     required this.server,
+    required this.index,
     required this.isSelectMode,
     required this.isSelected,
     this.onTap,
@@ -275,7 +302,7 @@ class _ServerRow extends StatelessWidget {
   Color _statusColor() {
     switch (server.status) {
       case ServerStatus.online:
-        return AppTheme.success;
+        return AppTheme.terminalMint;
       case ServerStatus.offline:
         return AppTheme.disabled;
       case ServerStatus.error:
@@ -306,34 +333,41 @@ class _ServerRow extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.primary.withValues(alpha: 0.08)
-              : AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
+              ? AppTheme.terminalMint.withValues(alpha: 0.1)
+              : AppTheme.cardBackground,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppTheme.primary : AppTheme.border,
-            width: isSelected ? 1.5 : 1,
+            color: isSelected
+                ? AppTheme.terminalMint
+                : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 1.5 : 0.5,
           ),
         ),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
           leading: isSelectMode
               ? Checkbox(
                   value: isSelected,
                   onChanged: onCheckChanged,
-                  activeColor: AppTheme.primary,
+                  activeColor: AppTheme.terminalMint,
                   side: const BorderSide(color: AppTheme.textSecondary),
                 )
               : Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: isSelected
+                        ? AppTheme.terminalMint.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.server,
                     size: 18,
-                    color: AppTheme.primary,
+                    color: isSelected ? AppTheme.terminalMint : Colors.white,
                   ),
                 ),
           title: Text(
@@ -354,24 +388,50 @@ class _ServerRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _statusColor().withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  _statusLabel(),
-                  style: GoogleFonts.inter(
-                    color: _statusColor(),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  color: _statusColor().withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _statusColor().withValues(alpha: 0.2),
+                    width: 0.5,
                   ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _statusColor(),
+                        shape: BoxShape.circle,
+                        boxShadow: server.status == ServerStatus.online
+                            ? [
+                                BoxShadow(
+                                  color: _statusColor().withValues(alpha: 0.6),
+                                  blurRadius: 4,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _statusLabel(),
+                      style: GoogleFonts.inter(
+                        color: _statusColor(),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (!isSelectMode) ...[
                 const SizedBox(width: 8),
                 ReorderableDragStartListener(
-                  index: 0,
+                  index: index,
                   child: const Icon(
                     LucideIcons.gripVertical,
                     color: AppTheme.textSecondary,

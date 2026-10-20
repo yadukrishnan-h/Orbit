@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
@@ -17,7 +17,6 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:ui';
 import 'package:orbit/core/localization/app_localization.dart';
-import 'package:orbit/core/widgets/system_card.dart';
 
 class FilesScreen extends ConsumerStatefulWidget {
   const FilesScreen({super.key});
@@ -29,10 +28,40 @@ class FilesScreen extends ConsumerStatefulWidget {
 class _FilesScreenState extends ConsumerState<FilesScreen> {
   bool _showServerSelector = true;
   final _breadcrumbController = ScrollController();
+  bool _isSearchOpen = false;
+  final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
+  String _fileSearchQuery = '';
+
+  Future<Directory> _getSharedCacheDir() async {
+    final tempDir = await getTemporaryDirectory();
+    final cacheDir = Directory('${tempDir.path}/shared_cache');
+    if (!await cacheDir.exists()) {
+      await cacheDir.create(recursive: true);
+    }
+    return cacheDir;
+  }
+
+  void _cleanSharedCache() {
+    unawaited(() async {
+      try {
+        final cacheDir = await _getSharedCacheDir();
+        if (await cacheDir.exists()) {
+          final entities = cacheDir.listSync();
+          for (final entity in entities) {
+            try {
+              entity.deleteSync(recursive: true);
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    }());
+  }
 
   @override
   void initState() {
     super.initState();
+    _cleanSharedCache();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = GoRouterState.of(context).extra;
       if (args is Server) {
@@ -60,7 +89,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final state = ref.watch(fileBrowserStateProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFF0A0A0C),
       appBar: _buildAppBar(state),
       body: Stack(
         children: [
@@ -71,6 +100,35 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           if (state.isNavigating) _buildNavigationOverlay(state),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: state.isConnected
+          ? Container(
+              height: 56,
+              width: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00E676), Color(0xFF00BFA5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                onPressed: () => _uploadFile(),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                tooltip: 'Upload File',
+                child: const Icon(LucideIcons.upload, color: Color(0xFF0A0A0C)),
+              ),
+            )
+          : null,
     );
   }
 
@@ -211,36 +269,32 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       backgroundColor: AppTheme.background,
       elevation: 0,
       actions: [
-        // Multi-select toggle
-        if (state.isConnected && state.files.isNotEmpty)
-          IconButton(
-            icon: Icon(
-              state.isMultiSelectMode ? LucideIcons.x : LucideIcons.checkSquare,
-              color: state.isMultiSelectMode
-                  ? AppTheme.primary
-                  : AppTheme.textPrimary,
-            ),
-            onPressed: () => _toggleMultiSelect(),
-            tooltip: state.isMultiSelectMode ? 'Cancel' : 'Select Multiple',
-          ),
-        // View mode toggle
+        // Search button
         if (state.isConnected)
           IconButton(
             icon: Icon(
-              state.viewMode == ViewMode.list
-                  ? LucideIcons.grid
-                  : LucideIcons.list,
-              color: AppTheme.textPrimary,
+              _isSearchOpen ? LucideIcons.x : LucideIcons.search,
+              color: _isSearchOpen ? AppTheme.primary : AppTheme.textPrimary,
+              size: 20,
             ),
-            onPressed: () => _toggleViewMode(),
-            tooltip: state.viewMode == ViewMode.list
-                ? 'Grid View'
-                : 'List View',
+            onPressed: () {
+              setState(() {
+                _isSearchOpen = !_isSearchOpen;
+                if (!_isSearchOpen) {
+                  _fileSearchQuery = '';
+                  _searchController.clear();
+                  _searchFocusNode.unfocus();
+                } else {
+                  _searchFocusNode.requestFocus();
+                }
+              });
+            },
+            tooltip: _isSearchOpen ? 'Close search' : 'Search files',
           ),
         // Refresh button
         if (state.isConnected)
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               LucideIcons.refreshCw,
               color: AppTheme.textPrimary,
               size: 20,
@@ -248,20 +302,118 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             onPressed: state.isLoading ? null : () => _refresh(),
             tooltip: 'Refresh',
           ),
-        // Upload button
+        // Three-dot overflow menu for secondary actions
         if (state.isConnected)
-          IconButton(
-            icon: const Icon(LucideIcons.upload, color: AppTheme.textPrimary),
-            onPressed: () => _uploadFile(),
-            tooltip: 'Upload',
+          PopupMenuButton<String>(
+            icon: const Icon(
+              LucideIcons.moreVertical,
+              color: AppTheme.textPrimary,
+            ),
+            color: AppTheme.surface,
+            onSelected: (value) {
+              if (value == 'select') {
+                if (state.files.isNotEmpty) {
+                  _toggleMultiSelect();
+                }
+              } else if (value == 'view') {
+                _toggleViewMode();
+              } else if (value == 'disconnect') {
+                ref.read(fileBrowserStateProvider.notifier).disconnect();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'select',
+                enabled: state.files.isNotEmpty,
+                child: Text(
+                  'Select Files',
+                  style: GoogleFonts.inter(color: AppTheme.textPrimary),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'view',
+                child: Text(
+                  'Toggle Grid/List View',
+                  style: GoogleFonts.inter(color: AppTheme.textPrimary),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'disconnect',
+                child: Text(
+                  'Disconnect',
+                  style: GoogleFonts.inter(color: AppTheme.critical),
+                ),
+              ),
+            ],
           ),
-        // Server selector button
-        IconButton(
-          icon: const Icon(LucideIcons.server, color: AppTheme.textPrimary),
-          onPressed: () => _showServerSelectorDialog(),
-          tooltip: 'Change Server',
-        ),
       ],
+    );
+  }
+
+  Widget _buildFileSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        color: AppTheme.background,
+        border: Border(bottom: BorderSide(color: Color(0x0CFFFFFF), width: 1)),
+      ),
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.primary.withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.search, size: 16, color: AppTheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                onChanged: (val) {
+                  setState(() {
+                    _fileSearchQuery = val.trim().toLowerCase();
+                  });
+                },
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Filter files by name...',
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            if (_fileSearchQuery.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  _searchController.clear();
+                  setState(() {
+                    _fileSearchQuery = '';
+                  });
+                },
+                child: const Icon(
+                  LucideIcons.x,
+                  size: 16,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -274,6 +426,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       children: [
         // Enhanced breadcrumb path bar
         _buildBreadcrumbBar(state),
+        // File search bar when active
+        if (_isSearchOpen) _buildFileSearchBar(),
         // Disk usage indicator
         if (state.diskUsage != null) _buildDiskUsageIndicator(state),
         // File list/grid
@@ -356,84 +510,174 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            // ── Section Header ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                builder: (_, v, child) => Opacity(opacity: v, child: child),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        LucideIcons.folderOpen,
-                        size: 36,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      ref.tr('file_manager'),
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      ref.tr('select_server_files'),
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Text(
+                'Select a system to browse, upload, and download directories remotely using a secure FTP connection.',
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 14,
+                  height: 1.5,
                 ),
               ),
             ),
-
-            // Divider
-            const Divider(color: AppTheme.border, height: 1),
+            Text('AVAILABLE SESSIONS', style: AppTheme.sectionTitleStyle),
             const SizedBox(height: 12),
-
-            // ── Server List ──
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: servers.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) => _ServerTile(
-                  server: servers[index],
+            ...List.generate(servers.length, (index) {
+              final server = servers[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildFileSessionCard(
+                  server: server,
                   onTap: () {
                     setState(() {
                       _showServerSelector = false;
                     });
-                    _connectToServer(servers[index]);
+                    _connectToServer(server);
                   },
                 ),
-              ),
-            ),
+              );
+            }),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildFileSessionCard({
+    required Server server,
+    required VoidCallback onTap,
+  }) {
+    final isOnline = server.status == ServerStatus.online;
+    final statusColor = isOnline
+        ? AppTheme.terminalMint
+        : const Color(0xFF7E8492);
+    final statusBgColor = isOnline
+        ? AppTheme.terminalMint.withValues(alpha: 0.12)
+        : const Color(0xFF7E8492).withValues(alpha: 0.12);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Leading icon tile
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? AppTheme.terminalMint.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isOnline
+                      ? AppTheme.terminalMint.withValues(alpha: 0.25)
+                      : Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
+              ),
+              child: Icon(
+                LucideIcons.folder,
+                size: 20,
+                color: isOnline
+                    ? AppTheme.terminalMint
+                    : AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Server name & technical subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    server.name,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${server.username}@${server.hostname}:${server.port}',
+                    style: GoogleFonts.firaCode(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Pill status badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusBgColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                      boxShadow: isOnline
+                          ? [
+                              BoxShadow(
+                                color: statusColor.withValues(alpha: 0.6),
+                                blurRadius: 4,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOnline ? 'Online' : 'Offline',
+                    style: GoogleFonts.inter(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              LucideIcons.chevronRight,
+              size: 16,
+              color: AppTheme.textSecondary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -448,10 +692,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        border: Border(bottom: BorderSide(color: AppTheme.border, width: 1)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0x0CFFFFFF), width: 1)),
       ),
       child: Row(
         children: [
@@ -492,27 +735,42 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                     onTap: () => _navigateToHome(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 14,
+                        vertical: 8,
                       ),
+
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: segments.isEmpty
+                            ? AppTheme.primary.withValues(alpha: 0.15)
+                            : Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: segments.isEmpty
+                              ? AppTheme.primary.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.08),
+                          width: 0.5,
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             LucideIcons.folder,
                             size: 14,
-                            color: AppTheme.primary,
+                            color: segments.isEmpty
+                                ? AppTheme.primary
+                                : AppTheme.textPrimary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             'Root',
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.primary,
+                              fontWeight: segments.isEmpty
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: segments.isEmpty
+                                  ? AppTheme.textPrimary
+                                  : AppTheme.textSecondary,
                             ),
                           ),
                         ],
@@ -535,14 +793,20 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                           onTap: () => _navigateToPath(path),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                              horizontal: 14,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
                               color: isLast
                                   ? AppTheme.primary.withValues(alpha: 0.15)
-                                  : null,
-                              borderRadius: BorderRadius.circular(6),
+                                  : Colors.white.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isLast
+                                    ? AppTheme.primary.withValues(alpha: 0.5)
+                                    : Colors.white.withValues(alpha: 0.08),
+                                width: 0.5,
+                              ),
                             ),
                             child: Text(
                               segments[index],
@@ -585,7 +849,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: AppTheme.background,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Icon(
@@ -605,7 +869,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                   children: [
                     Text(
                       'DISK USAGE',
-                      style: AppTheme.sectionHeaderStyle.copyWith(fontSize: 11),
+                      style: AppTheme.sectionHeaderStyle.copyWith(
+                        fontSize: 11,
+                        letterSpacing: 1.2,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     Text(
                       '${formatPercent(usagePercent)} (${_formatBytes(available)} free)',
@@ -613,24 +881,24 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         fontSize: 11,
                         color: isCritical
                             ? AppTheme.critical
-                            : (isWarning
-                                  ? AppTheme.warning
-                                  : AppTheme.textSecondary),
-                        fontWeight: FontWeight.w500,
+                            : (isWarning ? AppTheme.warning : Colors.white),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: usagePercent / 100,
-                    backgroundColor: AppTheme.zinc800,
+                    backgroundColor: const Color(0xFF2A2C31),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isCritical
                           ? AppTheme.critical
-                          : (isWarning ? AppTheme.warning : AppTheme.primary),
+                          : (isWarning
+                                ? AppTheme.warning
+                                : const Color(0xFF00E676)),
                     ),
                     minHeight: 6,
                   ),
@@ -761,60 +1029,92 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       );
     }
 
+    final filteredFiles = _fileSearchQuery.isEmpty
+        ? state.files
+        : state.files
+              .where((f) => f.name.toLowerCase().contains(_fileSearchQuery))
+              .toList();
+
+    if (state.files.isNotEmpty && filteredFiles.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.searchX, size: 48, color: AppTheme.border),
+            const SizedBox(height: 16),
+            Text(
+              'No files match "$_fileSearchQuery"',
+              style: AppTheme.infoLabelStyle.copyWith(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _fileSearchQuery = '';
+                });
+              },
+              child: const Text('Clear Filter'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: () => _refresh(),
       color: AppTheme.primary,
       backgroundColor: AppTheme.surface,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: SystemCard(
-          padding: EdgeInsets.zero,
-          child: state.viewMode == ViewMode.list
-              ? ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: state.files.length,
-                  itemBuilder: (context, index) {
-                    final file = state.files[index];
-                    return RemoteFileItem(
-                      file: file,
-                      onTap: () => _onFileTap(file),
-                      onLongPress: () => _showFileOptions(file),
-                      isSelected: state.selectedFiles.contains(file.path),
-                      isInMultiSelectMode: state.isMultiSelectMode,
-                      isNavigationDisabled: state.isNavigating,
-                      onToggleSelect: () => _toggleFileSelection(file.path),
-                      viewMode: ViewMode.list,
-                    );
-                  },
-                )
-              : GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: state.files.length,
-                  itemBuilder: (context, index) {
-                    final file = state.files[index];
-                    return RemoteFileItem(
-                      file: file,
-                      onTap: () => _onFileTap(file),
-                      onLongPress: () => _showFileOptions(file),
-                      isSelected: state.selectedFiles.contains(file.path),
-                      isInMultiSelectMode: state.isMultiSelectMode,
-                      isNavigationDisabled: state.isNavigating,
-                      onToggleSelect: () => _toggleFileSelection(file.path),
-                      viewMode: ViewMode.grid,
-                    );
-                  },
-                ),
+        padding: EdgeInsets.only(
+          top: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
         ),
+        child: state.viewMode == ViewMode.list
+            ? ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredFiles.length,
+                itemBuilder: (context, index) {
+                  final file = filteredFiles[index];
+                  return RemoteFileItem(
+                    file: file,
+                    onTap: () => _onFileTap(file),
+                    onLongPress: () => _showFileOptions(file),
+                    isSelected: state.selectedFiles.contains(file.path),
+                    isInMultiSelectMode: state.isMultiSelectMode,
+                    isNavigationDisabled: state.isNavigating,
+                    onToggleSelect: () => _toggleFileSelection(file.path),
+                    viewMode: ViewMode.list,
+                  );
+                },
+              )
+            : GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                ),
+                itemCount: filteredFiles.length,
+                itemBuilder: (context, index) {
+                  final file = filteredFiles[index];
+                  return RemoteFileItem(
+                    file: file,
+                    onTap: () => _onFileTap(file),
+                    onLongPress: () => _showFileOptions(file),
+                    isSelected: state.selectedFiles.contains(file.path),
+                    isInMultiSelectMode: state.isMultiSelectMode,
+                    isNavigationDisabled: state.isNavigating,
+                    onToggleSelect: () => _toggleFileSelection(file.path),
+                    viewMode: ViewMode.grid,
+                  );
+                },
+              ),
       ),
     );
   }
@@ -824,7 +1124,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final hasSelection = selectedCount > 0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        12 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
@@ -836,60 +1141,58 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            // Selection count
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      child: Row(
+        children: [
+          // Selection count
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$selectedCount selected',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                if (hasSelection)
                   Text(
-                    '$selectedCount selected',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
+                    'Choose an action',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
-                  if (hasSelection)
-                    Text(
-                      'Choose an action',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
-            // Action buttons
-            if (hasSelection) ...[
-              _buildActionButton(
-                LucideIcons.download,
-                'Download',
-                () => _downloadSelected(),
-              ),
-              _buildActionButton(
-                LucideIcons.trash2,
-                'Delete',
-                () => _deleteSelected(),
-                isDestructive: true,
-              ),
-            ],
+          ),
+          // Action buttons
+          if (hasSelection) ...[
             _buildActionButton(
-              LucideIcons.check,
-              'Select All',
-              () => _selectAll(),
+              LucideIcons.download,
+              'Download',
+              () => _downloadSelected(),
             ),
-            // Cancel button
-            IconButton(
-              icon: const Icon(LucideIcons.x, color: AppTheme.textSecondary),
-              onPressed: () => _toggleMultiSelect(),
-              tooltip: 'Cancel',
+            _buildActionButton(
+              LucideIcons.trash2,
+              'Delete',
+              () => _deleteSelected(),
+              isDestructive: true,
             ),
           ],
-        ),
+          _buildActionButton(
+            LucideIcons.check,
+            'Select All',
+            () => _selectAll(),
+          ),
+          // Cancel button
+          IconButton(
+            icon: const Icon(LucideIcons.x, color: AppTheme.textSecondary),
+            onPressed: () => _toggleMultiSelect(),
+            tooltip: 'Cancel',
+          ),
+        ],
       ),
     );
   }
@@ -1028,91 +1331,116 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
     if (!mounted) return;
 
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('New Folder'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Folder name',
-            labelStyle: TextStyle(color: AppTheme.textSecondary),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppTheme.border),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppTheme.primary),
+    try {
+      final name = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF141518),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          title: Text(
+            'New Folder',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
           ),
-          style: const TextStyle(color: AppTheme.textPrimary),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Folder name',
+              labelStyle: const TextStyle(color: AppTheme.textSecondary),
+              filled: true,
+              fillColor: const Color(0xFF181A20),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppTheme.terminalMint),
+              ),
+            ),
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text(
+                'Create',
+                style: TextStyle(
+                  color: AppTheme.terminalMint,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (name != null && name.isNotEmpty && mounted) {
-      try {
-        await ref.read(fileBrowserStateProvider.notifier).createDirectory(name);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Folder created'),
-              backgroundColor: AppTheme.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+      if (name != null && name.isNotEmpty && mounted) {
+        try {
+          await ref
+              .read(fileBrowserStateProvider.notifier)
+              .createDirectory(name);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Folder created'),
+                backgroundColor: AppTheme.success,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: AppTheme.critical,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppTheme.critical,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
+    } finally {
+      controller.dispose();
     }
   }
 
   Future<void> _uploadFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
-        type: FileType.any,
-      );
+      final files = await FilePicker.pickFiles(type: FileType.any);
 
-      if (result == null || result.files.isEmpty) return;
+      if (files.isEmpty) return;
 
-      final file = result.files.first;
-      final bytes = file.bytes;
-
-      if (bytes == null) {
-        throw Exception('Could not read file');
-      }
+      final file = files.first;
+      final uploadStream = file.xFile.openRead();
+      final totalBytes = file.lengthSync() ?? (await file.length()) ?? 0;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Uploading...'),
+            content: Text('Uploading ${file.name}...'),
             backgroundColor: AppTheme.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -1124,12 +1452,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
       await ref
           .read(fileBrowserStateProvider.notifier)
-          .uploadFile(file.name, bytes);
+          .uploadFileStream(file.name, uploadStream, totalBytes);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('File uploaded successfully'),
+            content: Text('File ${file.name} uploaded successfully'),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -1174,6 +1502,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     try {
       if (!mounted) return;
 
+      final directoryPath = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Select download folder',
+      );
+
+      if (directoryPath == null) {
+        // User cancelled destination folder selection
+        return;
+      }
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Downloading ${files.length} file(s)...'),
@@ -1182,22 +1521,18 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         ),
       );
 
-      final directory = await getApplicationDocumentsDirectory();
-
       for (final file in files) {
-        final bytes = await ref
+        final filePath = '$directoryPath/${file.name}';
+        await ref
             .read(fileBrowserStateProvider.notifier)
-            .downloadFile(file);
-        final filePath = '${directory.path}/${file.name}';
-        final savedFile = File(filePath);
-        await savedFile.writeAsBytes(bytes);
+            .downloadFile(file, destinationPath: filePath);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Downloaded ${files.length} file(s) to ${directory.path}',
+              'Downloaded ${files.length} file(s) to $directoryPath',
             ),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
@@ -1228,22 +1563,38 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Delete Selected Items'),
+        backgroundColor: const Color(0xFF141518),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        title: Text(
+          'Delete Selected Items',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         content: Text(
           'Are you sure you want to delete ${files.length} item(s)?',
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Delete',
-              style: TextStyle(color: AppTheme.critical),
+              style: TextStyle(
+                color: AppTheme.critical,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1279,19 +1630,50 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   void _showFileOptions(RemoteFile file) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: const Color(0xFF141518),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
             // Header
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Icon(
-                    file.isDirectory ? LucideIcons.folder : LucideIcons.file,
-                    color: AppTheme.primary,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: file.isDirectory
+                          ? AppTheme.terminalMint.withValues(alpha: 0.12)
+                          : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: file.isDirectory
+                            ? AppTheme.terminalMint.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Icon(
+                      file.isDirectory ? LucideIcons.folder : LucideIcons.file,
+                      color: file.isDirectory
+                          ? AppTheme.terminalMint
+                          : AppTheme.textSecondary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1300,17 +1682,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                       children: [
                         Text(
                           file.name,
-                          style: const TextStyle(
+                          style: GoogleFonts.inter(
                             color: AppTheme.textPrimary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 15,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           file.formattedSize,
-                          style: const TextStyle(
+                          style: GoogleFonts.firaCode(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
                           ),
@@ -1321,7 +1703,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                 ],
               ),
             ),
-            const Divider(color: AppTheme.border),
+            Divider(color: Colors.white.withValues(alpha: 0.08)),
             // Actions
             if (!file.isDirectory) ...[
               _buildActionItem(
@@ -1347,7 +1729,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               iconColor: AppTheme.critical,
               onTap: () => _deleteFile(file),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -1361,11 +1743,24 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     Color? iconColor,
     Color? labelColor,
   }) {
+    final effectiveColor = iconColor ?? AppTheme.textSecondary;
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppTheme.textSecondary),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: effectiveColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 18, color: effectiveColor),
+      ),
       title: Text(
         label,
-        style: TextStyle(color: labelColor ?? AppTheme.textPrimary),
+        style: GoogleFonts.inter(
+          color: labelColor ?? AppTheme.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       onTap: () {
         Navigator.pop(context);
@@ -1378,31 +1773,57 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     try {
       if (!mounted) return;
 
+      // Select destination folder via system file picker [LOGIC-003]
+      final destDir = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Select destination folder',
+      );
+
+      if (destDir == null) {
+        // User cancelled folder selection
+        return;
+      }
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Downloading...'),
+        SnackBar(
+          content: Text('Downloading ${file.name}...'),
           backgroundColor: AppTheme.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      final bytes = await ref
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/${file.name}');
+
+      // Stream download from SFTP socket into temporary file on disk
+      final File savedFile = await ref
           .read(fileBrowserStateProvider.notifier)
-          .downloadFile(file);
+          .downloadFile(file, destinationPath: tempFile.path);
 
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/${file.name}';
-      final savedFile = File(filePath);
-      await savedFile.writeAsBytes(bytes);
+      try {
+        final destPath = '$destDir/${file.name}';
+        final destFile = File(destPath);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved to $filePath'),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Stream chunked file bytes from temp to destination without buffering in RAM [LOGIC-002]
+        final sink = destFile.openWrite();
+        await savedFile.openRead().pipe(sink);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved ${file.name} to $destDir'),
+              backgroundColor: AppTheme.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        if (await savedFile.exists()) {
+          try {
+            await savedFile.delete();
+          } catch (_) {}
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1429,18 +1850,18 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         ),
       );
 
-      final bytes = await ref
+      final cacheDir = await _getSharedCacheDir();
+      final filePath = '${cacheDir.path}/${file.name}';
+
+      final savedFile = await ref
           .read(fileBrowserStateProvider.notifier)
-          .downloadFile(file);
+          .downloadFile(file, destinationPath: filePath);
 
-      final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/${file.name}';
-      final savedFile = File(filePath);
-      await savedFile.writeAsBytes(bytes);
-
-      await SharePlus.instance.share(ShareParams(files: [XFile(filePath)]));
-
-      await savedFile.delete();
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(savedFile.path)]),
+      );
+      // Do NOT delete savedFile immediately, as Android handles shares asynchronously!
+      // The shared_cache folder will be cleaned up on next screen init or dispose.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1459,67 +1880,96 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
     if (!mounted) return;
 
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Rename'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'New name',
-            labelStyle: TextStyle(color: AppTheme.textSecondary),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppTheme.border),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppTheme.primary),
+    try {
+      final newName = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF141518),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          title: Text(
+            'Rename',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
           ),
-          style: const TextStyle(color: AppTheme.textPrimary),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'New name',
+              labelStyle: const TextStyle(color: AppTheme.textSecondary),
+              filled: true,
+              fillColor: const Color(0xFF181A20),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppTheme.terminalMint),
+              ),
+            ),
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text(
+                'Rename',
+                style: TextStyle(
+                  color: AppTheme.terminalMint,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Rename'),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (newName != null &&
-        newName.isNotEmpty &&
-        newName != file.name &&
-        mounted) {
-      try {
-        await ref
-            .read(fileBrowserStateProvider.notifier)
-            .renameItem(file, newName);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Renamed successfully'),
-              backgroundColor: AppTheme.success,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: AppTheme.critical,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+      if (newName != null &&
+          newName.isNotEmpty &&
+          newName != file.name &&
+          mounted) {
+        try {
+          await ref
+              .read(fileBrowserStateProvider.notifier)
+              .renameItem(file, newName);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Renamed successfully'),
+                backgroundColor: AppTheme.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppTheme.critical,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -1529,22 +1979,38 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Delete'),
+        backgroundColor: const Color(0xFF141518),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        title: Text(
+          'Delete',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         content: Text(
           'Are you sure you want to delete "${file.name}"?',
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Delete',
-              style: TextStyle(color: AppTheme.critical),
+              style: TextStyle(
+                color: AppTheme.critical,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1577,248 +2043,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     }
   }
 
-  Future<void> _showServerSelectorDialog() async {
-    final servers = await (await ref.read(
-      serverRepositoryProvider.future,
-    )).getAllServers();
-
-    if (!mounted) return;
-
-    final selectedServer = await showGeneralDialog<Server>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return Center(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: animation.drive(
-                  Tween(
-                    begin: 0.9,
-                    end: 1.0,
-                  ).chain(CurveTween(curve: Curves.easeOutCubic)),
-                ),
-                child: AlertDialog(
-                  backgroundColor: AppTheme.surface,
-                  surfaceTintColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppTheme.border),
-                  ),
-                  titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                  contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  title: Text(
-                    'SELECT SERVER',
-                    style: AppTheme.sectionHeaderStyle.copyWith(fontSize: 14),
-                  ),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.6,
-                      ),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: servers.length,
-                        separatorBuilder: (context, index) =>
-                            const Divider(color: AppTheme.border, height: 1),
-                        itemBuilder: (context, index) {
-                          final server = servers[index];
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                LucideIcons.server,
-                                color: AppTheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              server.name,
-                              style: GoogleFonts.inter(
-                                color: AppTheme.textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${server.hostname}:${server.port}',
-                              style: GoogleFonts.firaCode(
-                                color: AppTheme.textSecondary,
-                                fontSize: 11,
-                              ),
-                            ),
-                            onTap: () => Navigator.pop(context, server),
-                            trailing: const Icon(
-                              LucideIcons.chevronRight,
-                              size: 14,
-                              color: AppTheme.textSecondary,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'CANCEL',
-                        style: GoogleFonts.inter(
-                          color: AppTheme.primary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    if (selectedServer != null && mounted) {
-      setState(() {
-        _showServerSelector = false;
-      });
-      await _connectToServer(selectedServer);
-    }
-  }
-
   @override
   void dispose() {
+    _cleanSharedCache();
     _breadcrumbController.dispose();
-    ref.read(fileBrowserStateProvider.notifier).disconnect();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Server tile (identical layout to terminal server tile)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ServerTile extends StatelessWidget {
-  const _ServerTile({required this.server, required this.onTap});
-
-  final Server server;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isOnline = server.status == ServerStatus.online;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border),
-          ),
-          child: Row(
-            children: [
-              // Server icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  LucideIcons.server,
-                  size: 20,
-                  color: AppTheme.primary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      server.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${server.username}@${server.hostname}:${server.port}',
-                      style: GoogleFonts.firaCode(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Status badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: (isOnline ? AppTheme.success : AppTheme.disabled)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: isOnline ? AppTheme.success : AppTheme.disabled,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      isOnline ? 'Online' : 'Offline',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isOnline ? AppTheme.success : AppTheme.disabled,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                LucideIcons.chevronRight,
-                size: 16,
-                color: AppTheme.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

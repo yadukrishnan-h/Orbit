@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/localization/app_localization.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/settings/models/app_settings.dart';
@@ -26,10 +26,14 @@ class LanguageTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: const Icon(
-        LucideIcons.globe,
-        color: AppTheme.textSecondary,
-        size: 20,
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(LucideIcons.globe, color: Colors.white, size: 18),
       ),
       title: Text(
         ref.tr('language'),
@@ -65,10 +69,13 @@ class LanguageTile extends ConsumerWidget {
         return StatefulBuilder(
           builder: (ctx, setState) {
             return AlertDialog(
-              backgroundColor: AppTheme.surface,
+              backgroundColor: const Color(0xFF141518),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppTheme.border),
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
               ),
               insetPadding: EdgeInsets.symmetric(
                 horizontal: MediaQuery.sizeOf(ctx).width * 0.075,
@@ -93,6 +100,7 @@ class LanguageTile extends ConsumerWidget {
                     children: AppSettings.supportedLanguages.map((lang) {
                       return RadioListTile<String>(
                         value: lang['code']!,
+                        activeColor: AppTheme.terminalMint,
                         title: Text(
                           lang['name']!,
                           style: GoogleFonts.inter(color: AppTheme.textPrimary),
@@ -117,7 +125,10 @@ class LanguageTile extends ConsumerWidget {
                   },
                   child: Text(
                     ref.tr('apply'),
-                    style: GoogleFonts.inter(color: AppTheme.primary),
+                    style: GoogleFonts.inter(
+                      color: AppTheme.terminalMint,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

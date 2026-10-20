@@ -25,18 +25,6 @@ class ServerService {
   }
 
   Future<void> updateSnapshot(String serverId, ServerStats stats) async {
-    final server = await _repository.getServerById(serverId);
-    if (server != null) {
-      final updated = server.copyWith(
-        lastCpu: stats.cpuPct,
-        lastRam: stats.ramPct,
-        lastDisk: stats.diskPct,
-        lastDiskUsed: stats.diskUsed,
-        lastDiskTotal: stats.diskTotal,
-        serverLocation: stats.serverLocation,
-        lastSeen: DateTime.now(),
-      );
-      await _repository.updateServer(updated);
-    }
+    await _repository.updateSnapshot(serverId, stats);
   }
 }

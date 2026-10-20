@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 /// Tracks the loading state for individual servers
 /// Used to block user interactions until initial data is loaded

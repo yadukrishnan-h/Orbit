@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/features/files/data/remote_file.dart';
 
@@ -47,14 +47,14 @@ class RemoteFileItem extends StatelessWidget {
             onTap: isInMultiSelectMode ? onToggleSelect : onTap,
             onLongPress: isNavigationDisabled ? null : onLongPress,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppTheme.primary.withValues(alpha: 0.1)
                     : Colors.transparent,
                 border: Border(
                   bottom: BorderSide(
-                    color: AppTheme.border.withValues(alpha: 0.5),
+                    color: Colors.white.withValues(alpha: 0.05),
                     width: 1,
                   ),
                 ),
@@ -109,13 +109,9 @@ class RemoteFileItem extends StatelessWidget {
                               child: Text(
                                 file.name,
                                 style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: file.isDirectory
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  color: file.isDirectory
-                                      ? AppTheme.primary
-                                      : AppTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -152,23 +148,26 @@ class RemoteFileItem extends StatelessWidget {
                             // Size
                             Text(
                               file.formattedSize,
-                              style: AppTheme.infoLabelStyle.copyWith(
-                                fontSize: 11,
+                              style: const TextStyle(
+                                color: Color(0xFF8E8E93),
+                                fontSize: 12,
                               ),
                             ),
                             const SizedBox(width: 8),
                             // Modified time
-                            Text(
+                            const Text(
                               '•',
-                              style: AppTheme.infoLabelStyle.copyWith(
-                                fontSize: 11,
+                              style: TextStyle(
+                                color: Color(0xFF8E8E93),
+                                fontSize: 12,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               file.formattedModified,
-                              style: AppTheme.infoLabelStyle.copyWith(
-                                fontSize: 11,
+                              style: const TextStyle(
+                                color: Color(0xFF8E8E93),
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -209,14 +208,14 @@ class RemoteFileItem extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primary.withValues(alpha: 0.15)
-                    : AppTheme.surface,
+                    ? AppTheme.terminalMint.withValues(alpha: 0.15)
+                    : AppTheme.cardBackground,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
-                      ? AppTheme.primary
-                      : AppTheme.border.withValues(alpha: 0.5),
-                  width: isSelected ? 2 : 1,
+                      ? AppTheme.terminalMint
+                      : Colors.white.withValues(alpha: 0.07),
+                  width: isSelected ? 1.5 : 0.5,
                 ),
               ),
               child: Column(
@@ -252,11 +251,9 @@ class RemoteFileItem extends StatelessWidget {
                     child: Text(
                       file.name,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: file.isDirectory
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -268,8 +265,8 @@ class RemoteFileItem extends StatelessWidget {
                   Text(
                     file.formattedSize,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      color: Color(0xFF8E8E93),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -290,9 +287,9 @@ class RemoteFileItem extends StatelessWidget {
 
     if (file.isDirectory) {
       icon = LucideIcons.folder;
-      iconColor = AppTheme.primary; // Mint green for folders
+      iconColor = AppTheme.terminalMint;
     } else {
-      iconColor = AppTheme.textSecondary; // Grey for files
+      iconColor = AppTheme.textSecondary;
       switch (file.fileType) {
         case 'image':
           icon = LucideIcons.image;
@@ -308,9 +305,11 @@ class RemoteFileItem extends StatelessWidget {
           break;
         case 'code':
           icon = LucideIcons.fileCode;
+          iconColor = const Color(0xFF64D2FF);
           break;
         case 'archive':
           icon = LucideIcons.fileArchive;
+          iconColor = const Color(0xFFFF9F0A);
           break;
         case 'config':
           icon = LucideIcons.settings;

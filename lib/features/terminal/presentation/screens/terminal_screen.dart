@@ -1,15 +1,17 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/models/server.dart';
 import 'package:orbit/core/providers.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/localization/app_localization.dart';
+import 'package:orbit/core/utils/error_mapper.dart';
 import 'package:orbit/features/terminal/providers/terminal_provider.dart';
 import 'package:xterm/xterm.dart' hide TerminalState;
 
@@ -26,15 +28,73 @@ class TerminalScreen extends ConsumerStatefulWidget {
 
 class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   final _terminalController = TerminalController();
+  bool _ctrlActive = false;
+  bool _altActive = false;
+
+  void _processTerminalInput(String data) {
+    if (data.isEmpty) return;
+    String processed = data;
+    if (_ctrlActive || _altActive) {
+      final buffer = StringBuffer();
+      for (int i = 0; i < data.length; i++) {
+        final code = data.codeUnitAt(i);
+        String char = data[i];
+        if (_ctrlActive) {
+          // Convert ASCII '@' through '_' and 'a' through 'z' to control bytes 0x00..0x1F [UI-001]
+          if ((code >= 64 && code <= 95) || (code >= 97 && code <= 122)) {
+            char = String.fromCharCode(code & 0x1F);
+          }
+        }
+        if (_altActive) {
+          char = '\x1b$char';
+        }
+        buffer.write(char);
+      }
+      processed = buffer.toString();
+      setState(() {
+        _ctrlActive = false;
+        _altActive = false;
+      });
+    }
+    ref.read(terminalProvider.notifier).sendRaw(processed);
+  }
+
+  Terminal? _attachedTerminal;
+
+  void _attachTerminal(Terminal terminal) {
+    if (_attachedTerminal == terminal &&
+        terminal.onOutput == _processTerminalInput) {
+      return;
+    }
+    _attachedTerminal = terminal;
+    terminal.onOutput = _processTerminalInput;
+  }
+
+  Future<void> _handlePaste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.isNotEmpty) {
+      ref.read(terminalProvider.notifier).sendRaw(data.text!);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = GoRouterState.of(context).extra;
-      if (args is Server) {
-        ref.read(terminalProvider.notifier).connectToServer(args);
+    // [UI-001]: Attach input interceptor once during initialization rather than inside build()
+    _attachTerminal(ref.read(terminalProvider).terminal);
+    ref.listenManual(terminalProvider, (previous, next) {
+      if (previous?.terminal != next.terminal) {
+        _attachTerminal(next.terminal);
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final args = GoRouterState.of(context).extra;
+        if (args is Server) {
+          ref.read(terminalProvider.notifier).connectToServer(args);
+        }
+      } catch (_) {}
     });
   }
 
@@ -169,15 +229,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
             color: AppTheme.textSecondary,
             onPressed: () => ref.read(terminalProvider.notifier).disconnect(),
           ),
-        // Always show the server picker shortcut
-        IconButton(
-          icon: const Icon(LucideIcons.server, size: 18),
-          color: AppTheme.textPrimary,
-          tooltip: 'Change server',
-          onPressed: state.isBusy
-              ? null
-              : () => ref.read(terminalProvider.notifier).disconnect(),
-        ),
       ],
     );
   }
@@ -192,7 +243,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         child: CircularProgressIndicator(color: AppTheme.primary),
       ),
       error: (e, _) => Center(
-        child: Text('$e', style: const TextStyle(color: AppTheme.critical)),
+        child: Text(
+          ErrorMapper.userFriendlyMessage(e),
+          style: const TextStyle(color: AppTheme.critical),
+          textAlign: TextAlign.center,
+        ),
       ),
       data: (servers) {
         if (servers.isEmpty) {
@@ -256,87 +311,171 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            // ── Section Header ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSizes.p20,
-                AppSizes.p8,
-                AppSizes.p20,
-                0,
-              ),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                builder: (_, v, child) => Opacity(opacity: v, child: child),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        LucideIcons.terminal,
-                        size: 36,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.p16),
-                    Text(
-                      ref.tr('open_terminal'),
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.p6),
-                    Text(
-                      ref.tr('select_server_shell'),
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.p24),
-                  ],
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Text(
+                'Select a system to initiate a secure shell (SSH) session and manage your server via the command line.',
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 14,
+                  height: 1.5,
                 ),
               ),
             ),
-
-            // Divider
-            const Divider(color: AppTheme.border, height: 1),
-            const SizedBox(height: AppSizes.p12),
-
-            // ── Server List ──
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSizes.p16,
-                  0,
-                  AppSizes.p16,
-                  AppSizes.p16,
+            Text('AVAILABLE SESSIONS', style: AppTheme.sectionTitleStyle),
+            const SizedBox(height: 12),
+            ...List.generate(servers.length, (index) {
+              final server = servers[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildSessionCard(
+                  server: server,
+                  onTap: () => ref
+                      .read(terminalProvider.notifier)
+                      .connectToServer(server),
                 ),
-                itemCount: servers.length,
-                separatorBuilder: (_, _) => const SizedBox(height: AppSizes.p8),
-                itemBuilder: (context, index) =>
-                    _ServerTile(server: servers[index]),
-              ),
-            ),
+              );
+            }),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSessionCard({
+    required Server server,
+    required VoidCallback onTap,
+  }) {
+    final isOnline = server.status == ServerStatus.online;
+    final statusColor = isOnline
+        ? AppTheme.terminalMint
+        : const Color(0xFF7E8492);
+    final statusBgColor = isOnline
+        ? AppTheme.terminalMint.withValues(alpha: 0.12)
+        : const Color(0xFF7E8492).withValues(alpha: 0.12);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Leading icon tile
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? AppTheme.terminalMint.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isOnline
+                      ? AppTheme.terminalMint.withValues(alpha: 0.25)
+                      : Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
+              ),
+              child: Icon(
+                LucideIcons.terminal,
+                size: 20,
+                color: isOnline
+                    ? AppTheme.terminalMint
+                    : AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Server name & technical subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    server.name,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${server.username}@${server.hostname}:${server.port}',
+                    style: GoogleFonts.firaCode(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Pill status badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusBgColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                      boxShadow: isOnline
+                          ? [
+                              BoxShadow(
+                                color: statusColor.withValues(alpha: 0.6),
+                                blurRadius: 4,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOnline ? 'Online' : 'Offline',
+                    style: GoogleFonts.inter(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              LucideIcons.chevronRight,
+              size: 16,
+              color: AppTheme.textSecondary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -446,7 +585,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      state.errorMessage ?? 'Unknown error.',
+                      ErrorMapper.userFriendlyMessage(state.errorMessage),
                       style: GoogleFonts.firaCode(
                         fontSize: 12,
                         color: AppTheme.critical,
@@ -515,7 +654,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   Widget _buildTerminalView(TerminalState state) {
     return Column(
       children: [
-        _TerminalStatusBar(server: state.selectedServer),
+        _TerminalStatusBar(
+          server: state.selectedServer,
+          onDisconnect: () => ref.read(terminalProvider.notifier).disconnect(),
+        ),
         Expanded(
           child: TerminalView(
             state.terminal,
@@ -528,7 +670,24 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
             theme: _getTerminalTheme(),
           ),
         ),
-        _QuickKeysBar(terminal: state.terminal),
+        _QuickKeysBar(
+          terminal: state.terminal,
+          isCtrlActive: _ctrlActive,
+          isAltActive: _altActive,
+          onCtrlToggle: () {
+            setState(() {
+              _ctrlActive = !_ctrlActive;
+            });
+          },
+          onAltToggle: () {
+            setState(() {
+              _altActive = !_altActive;
+            });
+          },
+          onKeyPress: _processTerminalInput,
+          onPaste: _handlePaste,
+        ),
+        SizedBox(height: MediaQuery.of(context).padding.bottom),
       ],
     );
   }
@@ -562,120 +721,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Server tile
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ServerTile extends ConsumerWidget {
-  const _ServerTile({required this.server});
-
-  final Server server;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isOnline = server.status == ServerStatus.online;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () =>
-            ref.read(terminalProvider.notifier).connectToServer(server),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  LucideIcons.server,
-                  size: 20,
-                  color: AppTheme.primary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      server.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${server.username}@${server.hostname}:${server.port}',
-                      style: GoogleFonts.firaCode(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: (isOnline ? AppTheme.success : AppTheme.disabled)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: isOnline ? AppTheme.success : AppTheme.disabled,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      isOnline ? 'Online' : 'Offline',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isOnline ? AppTheme.success : AppTheme.disabled,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                LucideIcons.chevronRight,
-                size: 16,
-                color: AppTheme.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TerminalStatusBar extends StatelessWidget {
-  const _TerminalStatusBar({required this.server});
+  const _TerminalStatusBar({required this.server, this.onDisconnect});
 
   final Server? server;
+  final VoidCallback? onDisconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -728,6 +778,20 @@ class _TerminalStatusBar extends StatelessWidget {
             'xterm-256color',
             style: GoogleFonts.firaCode(fontSize: 10, color: AppTheme.disabled),
           ),
+          if (onDisconnect != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(
+                LucideIcons.power,
+                size: 16,
+                color: AppTheme.critical,
+              ),
+              tooltip: 'Disconnect',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              onPressed: onDisconnect,
+            ),
+          ],
         ],
       ),
     );
@@ -735,9 +799,23 @@ class _TerminalStatusBar extends StatelessWidget {
 }
 
 class _QuickKeysBar extends StatelessWidget {
-  const _QuickKeysBar({required this.terminal});
+  const _QuickKeysBar({
+    required this.terminal,
+    required this.isCtrlActive,
+    required this.isAltActive,
+    required this.onCtrlToggle,
+    required this.onAltToggle,
+    required this.onKeyPress,
+    required this.onPaste,
+  });
 
   final Terminal terminal;
+  final bool isCtrlActive;
+  final bool isAltActive;
+  final VoidCallback onCtrlToggle;
+  final VoidCallback onAltToggle;
+  final ValueChanged<String> onKeyPress;
+  final VoidCallback onPaste;
 
   @override
   Widget build(BuildContext context) {
@@ -759,53 +837,125 @@ class _QuickKeysBar extends StatelessWidget {
 
     return Container(
       height: 54,
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
-        border: Border(top: BorderSide(color: AppTheme.border)),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
+        ),
       ),
-      child: ListView.builder(
+      child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: keys.length,
-        itemBuilder: (context, index) {
-          final key = keys[index];
-          return Center(
+        children: [
+          // Dedicated Paste button [UI-004]
+          Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: SizedBox(
                 height: 36,
-                child: TextButton(
+                child: TextButton.icon(
                   style: TextButton.styleFrom(
-                    backgroundColor: AppTheme.background,
-                    foregroundColor: AppTheme.textPrimary,
+                    backgroundColor: AppTheme.terminalMint.withValues(
+                      alpha: 0.12,
+                    ),
+                    foregroundColor: AppTheme.terminalMint,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: AppTheme.border),
+                      side: BorderSide(
+                        color: AppTheme.terminalMint.withValues(alpha: 0.3),
+                        width: 0.5,
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    minimumSize: const Size(44, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(64, 36),
                   ),
-                  onPressed: () {
-                    // For now, CTRL and ALT just send a dummy char or we can implement toggle logic later.
-                    // But standard terminal keys are essential.
-                    if (key.$2 == 'ctrl' || key.$2 == 'alt') {
-                      // Placeholder for modifier logic
-                      return;
-                    }
-                    terminal.onOutput?.call(key.$2);
-                  },
-                  child: Text(
-                    key.$1,
+                  onPressed: onPaste,
+                  icon: const Icon(LucideIcons.clipboardPaste, size: 14),
+                  label: Text(
+                    'PASTE',
                     style: GoogleFonts.firaCode(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.terminalMint,
                     ),
                   ),
                 ),
               ),
             ),
-          );
-        },
+          ),
+          ...keys.map((key) {
+            final isCtrl = key.$1 == 'CTRL';
+            final isAlt = key.$1 == 'ALT';
+            final isKeyActive =
+                (isCtrl && isCtrlActive) || (isAlt && isAltActive);
+            final isModifier =
+                key.$1 == 'ESC' || key.$1 == 'TAB' || isCtrl || isAlt;
+
+            Color backgroundColor;
+            Color foregroundColor;
+            Color borderColor;
+
+            if (isKeyActive) {
+              backgroundColor = AppTheme.terminalMint;
+              foregroundColor = const Color(0xFF111318);
+              borderColor = AppTheme.terminalMint;
+            } else if (isModifier) {
+              backgroundColor = AppTheme.terminalMint.withValues(alpha: 0.12);
+              foregroundColor = AppTheme.terminalMint;
+              borderColor = AppTheme.terminalMint.withValues(alpha: 0.3);
+            } else {
+              backgroundColor = const Color(0xFF181A20);
+              foregroundColor = AppTheme.textPrimary;
+              borderColor = Colors.white.withValues(alpha: 0.08);
+            }
+
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: SizedBox(
+                  height: 36,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: backgroundColor,
+                      foregroundColor: foregroundColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: borderColor,
+                          width: isKeyActive ? 1.5 : 0.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      minimumSize: const Size(44, 36),
+                    ),
+                    onPressed: () {
+                      if (isCtrl) {
+                        onCtrlToggle();
+                        return;
+                      }
+                      if (isAlt) {
+                        onAltToggle();
+                        return;
+                      }
+                      onKeyPress(key.$2);
+                    },
+                    child: Text(
+                      key.$1,
+                      style: GoogleFonts.firaCode(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: foregroundColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

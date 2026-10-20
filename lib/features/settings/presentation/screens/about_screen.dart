@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 import 'package:orbit/core/theme/app_sizes.dart';
 import 'package:orbit/core/widgets/system_card.dart';
@@ -34,7 +34,7 @@ class _AboutScreenState extends State<AboutScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _version = 'v1.1.1'; // Fallback
+          _version = 'v1.2.0'; // Fallback
         });
       }
     }
@@ -61,7 +61,12 @@ class _AboutScreenState extends State<AboutScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppSizes.p16),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.p16,
+            AppSizes.p16,
+            AppSizes.p16,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
           children: [
             const SizedBox(height: AppSizes.p32),
             // Header: Logo, App Name, Version
@@ -72,22 +77,24 @@ class _AboutScreenState extends State<AboutScreen> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.border, width: 2),
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: AppTheme.terminalMint.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          blurRadius: 24,
-                          spreadRadius: 8,
+                          color: AppTheme.terminalMint.withValues(alpha: 0.15),
+                          blurRadius: 28,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(20),
                       child: Image.asset(
-                        'assets/images/orbit-logo.png',
+                        'assets/images/orbit-logo.PNG',
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -180,10 +187,14 @@ class _AboutScreenState extends State<AboutScreen> {
         horizontal: AppSizes.p16,
         vertical: AppSizes.p4,
       ),
-      leading: Icon(
-        icon,
-        color: AppTheme.textSecondary,
-        size: AppSizes.iconNormal,
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
       title: Text(
         title,
@@ -214,10 +225,10 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _divider() {
-    return const Divider(
+    return Divider(
       height: 1,
-      thickness: 1,
-      color: AppTheme.border,
+      thickness: 0.5,
+      color: Colors.white.withValues(alpha: 0.05),
       indent: AppSizes.p16,
       endIndent: AppSizes.p16,
     );

@@ -4,22 +4,26 @@ class AppSettings {
   final String languageCode;
   final int pollIntervalSeconds;
   final bool isBiometricsEnabled;
+  final bool isGeolocationEnabled;
 
   const AppSettings({
     this.languageCode = 'en',
     this.pollIntervalSeconds = 3,
     this.isBiometricsEnabled = false,
+    this.isGeolocationEnabled = false,
   });
 
   AppSettings copyWith({
     String? languageCode,
     int? pollIntervalSeconds,
     bool? isBiometricsEnabled,
+    bool? isGeolocationEnabled,
   }) {
     return AppSettings(
       languageCode: languageCode ?? this.languageCode,
       pollIntervalSeconds: pollIntervalSeconds ?? this.pollIntervalSeconds,
       isBiometricsEnabled: isBiometricsEnabled ?? this.isBiometricsEnabled,
+      isGeolocationEnabled: isGeolocationEnabled ?? this.isGeolocationEnabled,
     );
   }
 

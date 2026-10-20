@@ -10,7 +10,7 @@ import 'package:orbit/features/dashboard/viewmodels/server_monitor_viewmodel.dar
 /// ViewModel provider for background server monitoring
 /// Manages persistent SSH connections and background polling
 final serverMonitorViewModelProvider =
-    AsyncNotifierProvider<ServerMonitorViewModel, void>(() {
+    AsyncNotifierProvider<ServerMonitorViewModel, ServerMonitorState>(() {
       return ServerMonitorViewModel();
     });
 
@@ -25,24 +25,30 @@ final serverStreamProvider = StreamProvider.family<Server?, String>((
 });
 
 /// History provider for charts
-/// Accessed by UI to get historical data for a specific server
+/// Uses .select() so a poll on Server A does NOT force widgets watching Server B to rebuild [LOGIC-004].
 final serverHistoryProvider = Provider.family<List<ServerStats>, String>((
   ref,
   serverId,
 ) {
-  ref.watch(serverMonitorViewModelProvider);
+  ref.watch(
+    serverMonitorViewModelProvider.select(
+      (asyncState) => asyncState.value?.historyTicks[serverId],
+    ),
+  );
   final vm = ref.read(serverMonitorViewModelProvider.notifier);
   return vm.getHistory(serverId);
 });
 
 /// Per-server SSH connection state provider.
-/// Rebuilds whenever the ViewModel emits a state change — which happens on
-/// every successful poll AND on every connection state transition.
+/// Uses .select() so connection transitions on Server A do not rebuild widgets watching Server B [LOGIC-004].
 final serverConnectionStateProvider =
     Provider.family<SshConnectionState, String>((ref, serverId) {
-      // Watch the VM so this provider rebuilds on every VM state emission
-      ref.watch(serverMonitorViewModelProvider);
-      return ref
-          .read(serverMonitorViewModelProvider.notifier)
-          .getConnectionState(serverId);
+      final conn = ref.watch(
+        serverMonitorViewModelProvider.select(
+          (asyncState) =>
+              asyncState.value?.connectionStates[serverId] ??
+              SshConnectionState.connecting,
+        ),
+      );
+      return conn;
     });

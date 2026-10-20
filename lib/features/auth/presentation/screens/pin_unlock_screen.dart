@@ -16,126 +16,216 @@ class PinUnlockScreen extends ConsumerStatefulWidget {
   ConsumerState<PinUnlockScreen> createState() => _PinUnlockScreenState();
 }
 
-class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen> {
+class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen>
+    with WidgetsBindingObserver {
   String _enteredPin = '';
   String? _errorText;
   static const int _pinLength = 4;
 
   // ── Security Constants ────────────────────────────────────────────────
-  static const int _maxFailedAttempts = 5;
-  static const Duration _standardLockoutDuration = Duration(seconds: 30);
-  static const Duration _penaltyLockoutDuration = Duration(minutes: 5);
+  static const int _penaltyLockoutSeconds = 300; // 5m anti-tamper penalty
 
   int _failedAttempts = 0;
-  DateTime? _lockoutEndTime;
+  int _remainingLockoutSeconds = 0;
+  int _initialLockoutSeconds = 0;
+  final Stopwatch _lockoutStopwatch = Stopwatch();
   Timer? _lockoutTimer;
   bool _isTimeTampered = false;
+  late SecureStorageService _storageService;
 
-  bool get _isLockedOut =>
-      _lockoutEndTime != null && DateTime.now().isBefore(_lockoutEndTime!);
-
-  @override
-  void dispose() {
-    _lockoutTimer?.cancel();
-    super.dispose();
-  }
+  bool get _isLockedOut => _remainingLockoutSeconds > 0;
 
   @override
   void initState() {
     super.initState();
+    _storageService = ref.read(secureStorageServiceProvider);
+    WidgetsBinding.instance.addObserver(this);
     _loadLockoutState();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _lockoutTimer?.cancel();
+    _lockoutStopwatch.stop();
+    _persistCurrentLockoutRemaining();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.inactive) {
+      _persistCurrentLockoutRemaining();
+    }
+  }
+
+  void _persistCurrentLockoutRemaining() {
+    if (_remainingLockoutSeconds > 0) {
+      _storageService.saveRemainingLockoutSeconds(_remainingLockoutSeconds);
+    }
+  }
+
   Future<void> _loadLockoutState() async {
-    final storage = ref.read(secureStorageServiceProvider);
-    final attempts = await storage.readFailedAttempts();
-    final lockoutTime = await storage.readLockoutTime();
+    final storage = _storageService;
+    final results = await Future.wait([
+      storage.readFailedAttempts(),
+      storage.readRemainingLockoutSeconds(),
+      storage.readLockoutTime(),
+      storage.readLastFailedAttempt(),
+    ]);
+    final attempts = results[0] as int;
+    final remaining = results[1] as int;
+    final lockoutEnd = results[2] as DateTime?;
+    final lastFailed = results[3] as DateTime?;
+    final now = DateTime.now();
+
+    int calculatedRemaining = 0;
+    bool isTampered = false;
+
+    // Check backward clock tamper [SEC-011]
+    if (lastFailed != null && now.isBefore(lastFailed)) {
+      isTampered = true;
+      calculatedRemaining = _penaltyLockoutSeconds;
+      await storage.saveRemainingLockoutSeconds(_penaltyLockoutSeconds);
+      await storage.saveLockoutTime(
+        now.add(const Duration(seconds: _penaltyLockoutSeconds)),
+      );
+    } else if (lockoutEnd != null) {
+      // If lockout expiration timestamp exists, compare with now [SEC-003]
+      if (now.isAfter(lockoutEnd)) {
+        calculatedRemaining = 0;
+        await storage.clearLockoutTimer();
+      } else {
+        calculatedRemaining = lockoutEnd.difference(now).inSeconds;
+      }
+    } else if (remaining > 0 && lastFailed != null) {
+      final elapsedWallSeconds = now.difference(lastFailed).inSeconds;
+      calculatedRemaining = remaining - elapsedWallSeconds;
+      if (calculatedRemaining <= 0) {
+        calculatedRemaining = 0;
+        await storage.clearLockoutTimer();
+      }
+    } else {
+      calculatedRemaining = remaining;
+      if (calculatedRemaining <= 0) {
+        calculatedRemaining = 0;
+      }
+    }
 
     if (mounted) {
       setState(() {
         _failedAttempts = attempts;
-        _lockoutEndTime = lockoutTime;
+        _remainingLockoutSeconds = calculatedRemaining;
+        _isTimeTampered = isTampered;
+        if (isTampered) {
+          _errorText = 'System time manipulation detected. 5m lockout.';
+        } else if (calculatedRemaining > 0) {
+          _errorText = 'Locked due to previous failed attempts.';
+        } else {
+          _errorText = null;
+        }
       });
 
-      if (_isLockedOut) {
-        _errorText = 'Locked due to previous attempts.';
-        _startLockoutTimer();
+      if (calculatedRemaining > 0) {
+        _startLockoutTimer(calculatedRemaining);
       }
     }
   }
 
-  void _startLockoutTimer() {
+  void _startLockoutTimer(int initialRemaining) {
     _lockoutTimer?.cancel();
-    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isLockedOut) {
-        timer.cancel();
-        // Clear lockout in storage when it expires naturally
-        _clearLockout();
-      }
-      if (mounted) setState(() {});
-    });
-  }
+    _initialLockoutSeconds = initialRemaining;
+    _lockoutStopwatch
+      ..reset()
+      ..start();
 
-  Future<void> _clearLockout() async {
-    final storage = ref.read(secureStorageServiceProvider);
-    await storage.saveFailedAttempts(0);
-    await storage.saveLockoutTime(null);
+    if (mounted) {
+      setState(() {
+        _remainingLockoutSeconds = initialRemaining;
+      });
+    }
+
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      final elapsed = _lockoutStopwatch.elapsed.inSeconds;
+      final currentRemaining = _initialLockoutSeconds - elapsed;
+
+      if (currentRemaining <= 0) {
+        timer.cancel();
+        _lockoutStopwatch.stop();
+        _storageService.clearLockoutTimer();
+        if (mounted) {
+          setState(() {
+            _remainingLockoutSeconds = 0;
+            _errorText = null;
+            _isTimeTampered = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _remainingLockoutSeconds = currentRemaining;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _verifyPin() async {
     if (_enteredPin.length != _pinLength || _isLockedOut) return;
 
-    final storage = ref.read(secureStorageServiceProvider);
+    final storage = _storageService;
     final now = DateTime.now();
 
-    // ── Anti-Tamper Check ────────────────────────────────────────────────
+    // ── Anti-Tamper Check (Clock Moving Backward) ────────────────────────
     final lastAttempt = await storage.readLastFailedAttempt();
     if (lastAttempt != null && now.isBefore(lastAttempt)) {
-      debugPrint('Security: System time manipulation detected!');
-      final penaltyEnd = now.add(_penaltyLockoutDuration);
-      await storage.saveLockoutTime(penaltyEnd);
+      debugPrint('Security: Backward system time manipulation detected!');
+      await storage.saveRemainingLockoutSeconds(_penaltyLockoutSeconds);
+      await storage.saveLockoutTime(
+        now.add(const Duration(seconds: _penaltyLockoutSeconds)),
+      );
 
       setState(() {
-        _lockoutEndTime = penaltyEnd;
+        _remainingLockoutSeconds = _penaltyLockoutSeconds;
         _isTimeTampered = true;
         _errorText = 'System time manipulation detected. 5m lockout.';
         _enteredPin = '';
       });
-      _startLockoutTimer();
+      _startLockoutTimer(_penaltyLockoutSeconds);
       return;
     }
 
-    final masterPin = await storage.readMasterPin();
+    final pinCorrect = await storage.verifyMasterPin(_enteredPin);
 
-    if (_enteredPin == masterPin) {
+    if (pinCorrect) {
       _failedAttempts = 0;
-      await _clearLockout();
+      _remainingLockoutSeconds = 0;
+      _lockoutTimer?.cancel();
+      _lockoutStopwatch.stop();
+      await storage.recordSuccessfulAuth();
       widget.onSuccess();
     } else {
-      // Record this attempt to prevent future time-travel
-      await storage.saveLastFailedAttempt(now);
-
-      final newAttempts = _failedAttempts + 1;
-      DateTime? newLockout;
-
-      if (newAttempts >= _maxFailedAttempts) {
-        newLockout = now.add(_standardLockoutDuration);
-      }
-
-      await storage.saveFailedAttempts(newAttempts);
-      await storage.saveLockoutTime(newLockout);
+      final lockoutDuration = await storage.recordFailedAttempt();
+      final newAttempts = await storage.readFailedAttempts();
 
       setState(() {
         _failedAttempts = newAttempts;
         _enteredPin = '';
-        if (newLockout != null) {
-          _lockoutEndTime = newLockout;
+        if (lockoutDuration > 0) {
+          _remainingLockoutSeconds = lockoutDuration;
           _errorText =
-              'Too many failed attempts. Try again in ${_standardLockoutDuration.inSeconds}s.';
-          _startLockoutTimer();
+              'Too many failed attempts. Try again in ${_remainingLockoutSeconds}s.';
+          _startLockoutTimer(lockoutDuration);
         } else {
           _errorText =
-              'Incorrect PIN. Try again. (${_maxFailedAttempts - _failedAttempts} attempts left)';
+              'Incorrect PIN. Try again. (${5 - _failedAttempts} attempts left)';
         }
       });
     }
@@ -143,8 +233,7 @@ class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final remainingLockout =
-        _lockoutEndTime?.difference(DateTime.now()).inSeconds ?? 0;
+    final remainingLockout = _remainingLockoutSeconds;
     final isLocked = _isLockedOut;
 
     return Scaffold(
@@ -155,10 +244,38 @@ class _PinUnlockScreenState extends ConsumerState<PinUnlockScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isLocked ? Icons.lock_clock : Icons.lock_outline,
-                  size: AppSizes.iconGiant,
-                  color: isLocked ? AppTheme.critical : AppTheme.primary,
+                Builder(
+                  builder: (context) {
+                    final accent = isLocked
+                        ? AppTheme.critical
+                        : AppTheme.terminalMint;
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.25),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.15),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isLocked
+                            ? Icons.lock_clock_rounded
+                            : Icons.lock_outline_rounded,
+                        size: 38,
+                        color: accent,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: AppSizes.p24),
                 Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:orbit/core/theme/app_theme.dart';
+import 'package:orbit/core/theme/app_sizes.dart';
 
 class SystemCard extends StatelessWidget {
   final Widget child;
@@ -7,6 +8,7 @@ class SystemCard extends StatelessWidget {
   final Widget? trailing;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
+  final Color? color;
 
   const SystemCard({
     super.key,
@@ -15,48 +17,51 @@ class SystemCard extends StatelessWidget {
     this.trailing,
     this.padding,
     this.onTap,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget current = Padding(
-      padding: padding ?? const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (title != null || trailing != null) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      decoration: BoxDecoration(
+        color: color ?? AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: padding ?? EdgeInsets.all(AppSizes.p20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (title != null) Text(title!, style: AppTheme.cardTitleStyle),
-                ?trailing,
+                if (title != null || trailing != null) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (title != null)
+                        Text(
+                          title!.toUpperCase(),
+                          style: AppTheme.sectionTitleStyle,
+                        ),
+                      trailing,
+                    ].whereType<Widget>().toList(),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                child,
               ],
             ),
-            const SizedBox(height: 16),
-          ],
-          child,
-        ],
+          ),
+        ),
       ),
-    );
-
-    if (onTap != null) {
-      current = InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: current,
-      );
-    }
-
-    return Card(
-      color: AppTheme.surface,
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.border),
-      ),
-      child: current,
     );
   }
 }

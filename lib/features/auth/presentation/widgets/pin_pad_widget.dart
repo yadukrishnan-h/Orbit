@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:orbit/core/theme/app_theme.dart';
 
 class PinPadWidget extends StatelessWidget {
@@ -55,22 +55,36 @@ class PinPadWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Dots
+        // Dots with glowing terminal mint animation
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(pinLength, (index) {
             final isFilled = index < currentPin.length;
-            return Container(
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.symmetric(horizontal: 12),
               width: 16,
               height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isFilled ? AppTheme.primary : AppTheme.surface,
+                color: isFilled
+                    ? AppTheme.terminalMint
+                    : const Color(0xFF141518),
                 border: Border.all(
-                  color: isFilled ? AppTheme.primary : AppTheme.border,
-                  width: 2,
+                  color: isFilled
+                      ? AppTheme.terminalMint
+                      : Colors.white.withValues(alpha: 0.15),
+                  width: 1.5,
                 ),
+                boxShadow: isFilled
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.terminalMint.withValues(alpha: 0.6),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
             );
           }),
@@ -111,18 +125,25 @@ class PinPadWidget extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isBackspace ? Colors.transparent : AppTheme.surface,
+              color: isBackspace ? Colors.transparent : const Color(0xFF141518),
+              border: isBackspace
+                  ? null
+                  : Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 0.5,
+                    ),
             ),
             child: Center(
               child: isBackspace
                   ? const Icon(
                       LucideIcons.delete,
                       color: AppTheme.textSecondary,
+                      size: 22,
                     )
                   : Text(
                       key,
                       style: GoogleFonts.inter(
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textPrimary,
                       ),

@@ -61,7 +61,30 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.security, size: 64, color: AppTheme.primary),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppTheme.terminalMint.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppTheme.terminalMint.withValues(alpha: 0.25),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.terminalMint.withValues(alpha: 0.15),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.security_rounded,
+                    size: 38,
+                    color: AppTheme.terminalMint,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 Text(
                   _isConfirming ? 'Confirm PIN' : 'Create Master PIN',
